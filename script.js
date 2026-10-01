@@ -385,20 +385,7 @@ async function saveAward() {
   if (!file) return showToast("Selecione uma foto", true);
   if (file.size > 5 * 1024 * 1024) return showToast("A foto deve ter no máximo 5 MB", true);
   try {
-    let image;
-    if (window.firebaseStorage) {
-      try {
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-        const storageRef = window.firebaseStorage.ref(`awards/${uid("photo")}-${safeName}`);
-        await storageRef.put(file);
-        image = await storageRef.getDownloadURL();
-      } catch (error) {
-        console.warn("Firebase Storage indisponível; usando foto local", error);
-      }
-    }
-    if (!image) {
-      image = await compressImage(file);
-    }
+    const image = await compressImage(file);
     database.awards = database.awards || [];
     database.awards.push({ id: uid("award"), image, caption: document.getElementById("award-caption").value.trim(), createdAt: new Date().toISOString() });
     saveDatabase(); closeModal("modal-award"); awardSlide = database.awards.length - 1; render(); showToast("Prêmio adicionado");
@@ -428,17 +415,7 @@ async function saveProfessor() {
   const file = document.getElementById("professor-foto").files[0];
   if (file && file.size > 5 * 1024 * 1024) return showToast("A foto deve ter no máximo 5 MB", true);
   let photo;
-  if (file && window.firebaseStorage) {
-    try {
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-      const storageRef = window.firebaseStorage.ref(`professors/${editingProfessorId || uid("professor")}-${safeName}`);
-      await storageRef.put(file);
-      photo = await storageRef.getDownloadURL();
-    } catch (error) {
-      console.warn("Firebase Storage indisponível; usando foto local", error);
-    }
-  }
-  if (file && !photo) {
+  if (file) {
     try {
       photo = await compressImage(file);
     } catch (error) {
