@@ -408,11 +408,23 @@ async function saveProfessor() {
   if (file && file.size > 5 * 1024 * 1024) return showToast("A foto deve ter no máximo 5 MB", true);
   let photo;
   if (file && window.firebaseStorage) {
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-    const storageRef = window.firebaseStorage.ref(`professors/${editingProfessorId || uid("professor")}-${safeName}`);
-    await storageRef.put(file);
-    photo = await storageRef.getDownloadURL();
-  } else if (file) photo = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+      const storageRef = window.firebaseStorage.ref(`professors/${editingProfessorId || uid("professor")}-${safeName}`);
+      await storageRef.put(file);
+      photo = await storageRef.getDownloadURL();
+    } catch (error) {
+      console.warn("Firebase Storage indisponível; usando foto local", error);
+    }
+  }
+  if (file && !photo) {
+    try {
+      photo = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
+    } catch (error) {
+      return showToast("Não foi possível ler a foto selecionada", true);
+    }
+  }
+  if (editingProfessorPhotoOnly && !photo) return showToast("Selecione uma foto", true);
   if (editingProfessorId) {
     const professor = database.professors.find(item => item.id === editingProfessorId);
     const previousName = professor.name;
