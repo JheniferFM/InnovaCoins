@@ -518,7 +518,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   setInterval(() => {
     if (selectedClassId === "overview" && (database.awards || []).length > 1) {
       awardSlide = (awardSlide + 1) % database.awards.length;
-      render();
+      const carousel = document.querySelector(".awards-carousel");
+      const current = database.awards[awardSlide];
+      if (carousel && current) {
+        const image = carousel.querySelector(".award-slide img");
+        const caption = carousel.querySelector(".award-caption");
+        const counter = carousel.querySelector(".award-controls span");
+        if (image) {
+          image.src = current.image;
+          image.alt = current.caption || "Prêmio Innova Coins";
+        }
+        if (caption) caption.textContent = current.caption || "Prêmio Innova Coins";
+        if (counter) counter.textContent = `${awardSlide + 1} / ${database.awards.length}`;
+      }
     }
   }, 5000);
 });
