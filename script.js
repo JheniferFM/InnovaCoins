@@ -229,7 +229,7 @@ function attendanceHtml() {
   record.present = record.present || {};
   record.rewarded = record.rewarded || {};
   const presentCount = students(turma).filter(aluno => record.present[aluno.id] !== false).length;
-  return `<section class="attendance-page"><div class="secao-head"><div><p class="page-kicker">Registro de presença</p><h1>📅 Chamada</h1><p>${presentCount} de ${students(turma).length} presentes</p></div><button class="btn btn-secondary" data-action="attendance-history">🗓️ Ver registros anteriores</button></div><div class="attendance-controls"><div class="form-group"><label for="attendance-professor">Professor</label><select id="attendance-professor" data-attendance-professor><option value="all">Todos os professores</option>${professors.map(professor => `<option value="${professor.id}" ${professor.id === attendanceProfessorId ? "selected" : ""}>${escapeHtml(professor.name)}</option>`).join("")}</select></div><div class="form-group"><label for="attendance-class">Turma</label><select id="attendance-class" data-attendance-class>${filteredClasses.map(item => `<option value="${item.id}" ${item.id === turma.id ? "selected" : ""}>${escapeHtml(item.nome)} · ${escapeHtml(item.dia || "")}</option>`).join("")}</select></div><div class="form-group"><label for="attendance-date">Data</label><input type="date" id="attendance-date" data-attendance-date value="${attendanceDate}"></div></div><div class="attendance-list">${students(turma).map(aluno => { const isPresent = record.present[aluno.id] !== false; const rewarded = record.rewarded[aluno.id]; return `<label class="attendance-row ${isPresent ? "is-present" : "is-absent"}"><input type="checkbox" data-attendance-student="${aluno.id}" ${isPresent ? "checked" : ""}><span>${escapeHtml(aluno.name)}</span><small>${rewarded ? "+5 IC registrado" : isPresent ? "Presença gera +5 IC" : "Falta · 0 IC"}</small></label>`; }).join("")}</div></section>`;
+  return `<section class="attendance-page"><div class="secao-head"><div><p class="page-kicker">Registro de presença</p><h1>📅 Chamada</h1><p>${presentCount} de ${students(turma).length} presentes</p></div><div class="secao-actions"><button class="btn ${record.launchedAt ? "btn-secondary" : "btn-primary"}" data-action="launch-attendance" ${record.launchedAt ? "disabled" : ""}>${record.launchedAt ? "✓ Chamada lançada" : "Lançar chamada"}</button><button class="btn btn-secondary" data-action="attendance-history">🗓️ Ver registros anteriores</button></div></div><div class="attendance-controls"><div class="form-group"><label for="attendance-professor">Professor</label><select id="attendance-professor" data-attendance-professor><option value="all">Todos os professores</option>${professors.map(professor => `<option value="${professor.id}" ${professor.id === attendanceProfessorId ? "selected" : ""}>${escapeHtml(professor.name)}</option>`).join("")}</select></div><div class="form-group"><label for="attendance-class">Turma</label><select id="attendance-class" data-attendance-class>${filteredClasses.map(item => `<option value="${item.id}" ${item.id === turma.id ? "selected" : ""}>${escapeHtml(item.nome)} · ${escapeHtml(item.dia || "")}</option>`).join("")}</select></div><div class="form-group"><label for="attendance-date">Data</label><input type="date" id="attendance-date" data-attendance-date value="${attendanceDate}"></div></div><div class="attendance-list">${students(turma).map(aluno => { const isPresent = record.present[aluno.id] !== false; const rewarded = record.rewarded[aluno.id]; return `<label class="attendance-row ${isPresent ? "is-present" : "is-absent"}"><input type="checkbox" data-attendance-student="${aluno.id}" ${isPresent ? "checked" : ""}><span>${escapeHtml(aluno.name)}</span><small>${rewarded ? "+5 IC registrado" : isPresent ? "Presença gera +5 IC" : "Falta · 0 IC"}</small></label>`; }).join("")}</div></section>`;
 }
 function attendanceHistoryHtml() {
   const professors = database.professors || [];
@@ -257,6 +257,20 @@ function saveAttendanceStatus(studentId, present) {
   }
   database.attendance[turma.id][attendanceDate] = record;
   saveDatabase(); render();
+}
+function launchAttendance() {
+  const turma = findClass(attendanceClassId);
+  const actor = activeProfile?.name || selectedActor;
+  if (!turma || !actor) return showToast("Entre com um perfil antes de lançar a chamada", true);
+  database.attendance = database.attendance || {};
+  database.attendance[turma.id] = database.attendance[turma.id] || {};
+  const record = database.attendance[turma.id][attendanceDate] || { present: {}, rewarded: {} };
+  record.present = record.present || {};
+  record.rewarded = record.rewarded || {};
+  record.launchedAt = new Date().toISOString();
+  record.launchedBy = actor;
+  database.attendance[turma.id][attendanceDate] = record;
+  saveDatabase(); render(); showToast("Chamada lançada");
 }
 function bestStudentsHtml() {
   const ranking = classes().flatMap(turma => students(turma).map(aluno => ({ aluno, turma }))).sort((a, b) => b.aluno.points - a.aluno.points);
@@ -305,6 +319,7 @@ function bindContentEvents() {
     if (action === "edit-professor-photo") openProfessorModal(selectedProfessorId, true);
     if (action === "delete-professor") deleteProfessor(selectedProfessorId);
     if (action === "attendance") { selectedClassId = "attendance"; selectedProfessorId = null; render(); }
+    if (action === "launch-attendance") launchAttendance();
     if (action === "attendance-history") { selectedClassId = "attendance-history"; selectedProfessorId = null; render(); }
   }));
 }
@@ -372,10 +387,16 @@ async function saveAward() {
   try {
     let image;
     if (window.firebaseStorage) {
-      const storageRef = window.firebaseStorage.ref(`awards/${uid("photo")}-${file.name}`);
-      await storageRef.put(file);
-      image = await storageRef.getDownloadURL();
-    } else {
+      try {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+        const storageRef = window.firebaseStorage.ref(`awards/${uid("photo")}-${safeName}`);
+        await storageRef.put(file);
+        image = await storageRef.getDownloadURL();
+      } catch (error) {
+        console.warn("Firebase Storage indisponível; usando foto local", error);
+      }
+    }
+    if (!image) {
       image = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
     }
     database.awards = database.awards || [];
