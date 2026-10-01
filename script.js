@@ -397,7 +397,7 @@ async function saveAward() {
       }
     }
     if (!image) {
-      image = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
+      image = await compressImage(file);
     }
     database.awards = database.awards || [];
     database.awards.push({ id: uid("award"), image, caption: document.getElementById("award-caption").value.trim(), createdAt: new Date().toISOString() });
@@ -440,7 +440,7 @@ async function saveProfessor() {
   }
   if (file && !photo) {
     try {
-      photo = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
+      photo = await compressImage(file);
     } catch (error) {
       return showToast("Não foi possível ler a foto selecionada", true);
     }
@@ -481,6 +481,27 @@ function registerPoints(points, label) { const found = findStudent(activeStudent
 function closeDrawer() { document.getElementById("drawer-overlay").classList.remove("open"); activeStudentId = null; }
 function closeModal(name) { document.getElementById(`${name}-overlay`).style.display = "none"; }
 function showToast(message, error = false) { const toast = document.getElementById("toast"); toast.textContent = message; toast.className = `toast show ${error ? "toast-error" : ""}`; setTimeout(() => toast.classList.remove("show"), 2500); }
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        const maxDimension = 900;
+        const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.78));
+      };
+      image.onerror = reject;
+      image.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 async function syncFirestore(data) { try { await window.firestoreDb.collection("innova").doc("database").set(data); } catch (error) { console.warn("Sincronização Firebase indisponível", error); } }
 async function loadFirestore() {
   try {
