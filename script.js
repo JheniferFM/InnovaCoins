@@ -25,7 +25,7 @@ const COINS = [
   { label: "Não entrega das atividades ou desafios", points: -5 }
 ];
 const DEFAULT_PROFILES = [
-  { id: "admin", name: "Administrador", pin: "804271" },
+  { id: "admin", name: "Administrador", pin: "804272" },
   { id: "matheus", name: "Matheus", pin: "391658" },
   { id: "jheni", name: "Jheni", pin: "726904" },
   { id: "lucas", name: "Lucas", pin: "158437" },
