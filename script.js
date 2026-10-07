@@ -255,7 +255,7 @@ function migrateDatabase(data) {
 }
 function saveDatabase() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(database));
-  if (window.firestoreDb) syncFirestore(database);
+  if (window.firestoreDb) void syncFirestore(database);
 }
 function classes() { return database.classes; }
 function students(turma) { return turma?.students || []; }
@@ -276,6 +276,28 @@ async function loadProfiles() {
     for (const profile of DEFAULT_PROFILES) await window.firestoreDb.collection("profiles").doc(profile.id).set(profile);
   } catch (error) { console.warn("Perfis locais em uso", error); }
   return DEFAULT_PROFILES;
+}
+function updateProfileOptions() {
+  document.getElementById("profile-select").innerHTML = profiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.name)}</option>`).join("");
+}
+function watchProfiles() {
+  if (!window.firestoreDb) return;
+  window.firestoreDb.collection("profiles").onSnapshot(snapshot => {
+    if (snapshot.empty) return;
+    profiles = snapshot.docs.map(doc => {
+      const profile = { id: doc.id, ...doc.data() };
+      return profile.id === "direcao" ? { ...profile, name: "Direção/Secretaria" } : profile;
+    });
+    updateProfileOptions();
+    if (activeProfile) {
+      activeProfile = profiles.find(profile => profile.id === activeProfile.id) || activeProfile;
+      sessionStorage.setItem("innovaCoinsActiveProfile", JSON.stringify(activeProfile));
+      selectedActor = activeProfile.name;
+    }
+  }, error => {
+    console.error("Não foi possível sincronizar os perfis do Firebase", error);
+    showToast("Não foi possível sincronizar os perfis. Verifique sua conexão.", true);
+  });
 }
 function showPinScreen() { document.getElementById("pin-screen").classList.remove("hidden"); }
 function enterWithPin() {
@@ -800,22 +822,52 @@ function compressImage(file) {
     reader.readAsDataURL(file);
   });
 }
-async function syncFirestore(data) { try { await window.firestoreDb.collection("innova").doc("database").set(data); } catch (error) { console.warn("Sincronização Firebase indisponível", error); } }
-async function loadFirestore() {
+async function syncFirestore(data) {
   try {
-    const snapshot = await window.firestoreDb.collection("innova").doc("database").get();
-    if (snapshot.exists && Array.isArray(snapshot.data().classes)) {
-      const remoteData = snapshot.data();
-      database = migrateDatabase(remoteData);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(database));
-      if (JSON.stringify(remoteData) !== JSON.stringify(database)) await syncFirestore(database);
+    await window.firestoreDb.collection("innova").doc("database").set(data);
+  } catch (error) {
+    console.error("Não foi possível salvar os dados no Firebase", error);
+    showToast("Alteração salva apenas neste computador. Falha ao sincronizar com a nuvem.", true);
+  }
+}
+function watchFirestore() {
+  if (!window.firestoreDb) return;
+  const databaseRef = window.firestoreDb.collection("innova").doc("database");
+  databaseRef.onSnapshot({ includeMetadataChanges: true }, snapshot => {
+    if (snapshot.metadata.fromCache) return;
+
+    if (!snapshot.exists) {
+      void syncFirestore(database);
+      return;
     }
-  } catch (error) { console.warn("Leitura do Firebase indisponível", error); }
+
+    const remoteData = snapshot.data();
+    if (!Array.isArray(remoteData.classes)) {
+      console.error("O documento innova/database não contém uma lista válida de turmas.");
+      showToast("Os dados na nuvem estão em formato inválido.", true);
+      return;
+    }
+
+    const migratedData = migrateDatabase(remoteData);
+    const localData = JSON.stringify(database);
+    const normalizedRemoteData = JSON.stringify(migratedData);
+    if (localData !== normalizedRemoteData) {
+      database = migratedData;
+      localStorage.setItem(STORAGE_KEY, normalizedRemoteData);
+      render();
+      if (activeStudentId) openDrawer(activeStudentId);
+    }
+    if (JSON.stringify(remoteData) !== normalizedRemoteData) void syncFirestore(migratedData);
+  }, error => {
+    console.error("Não foi possível receber atualizações do Firebase", error);
+    showToast("Não foi possível sincronizar. Verifique sua conexão e as regras do Firestore.", true);
+  });
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
   profiles = await loadProfiles();
-  document.getElementById("profile-select").innerHTML = profiles.map(profile => `<option value="${profile.id}">${escapeHtml(profile.name)}</option>`).join("");
+  updateProfileOptions();
+  watchProfiles();
   document.getElementById("pin-submit").addEventListener("click", enterWithPin);
   document.getElementById("profile-pin").addEventListener("keydown", event => { if (event.key === "Enter") enterWithPin(); });
   document.getElementById("change-profile-btn").addEventListener("click", changeProfile);
@@ -838,7 +890,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("drawer-close").addEventListener("click", closeDrawer);
   document.getElementById("drawer-overlay").addEventListener("click", event => { if (event.target.id === "drawer-overlay") closeDrawer(); });
   document.addEventListener("click", event => { const chip = event.target.closest("[data-points]"); if (chip) registerPoints(chip.dataset.points, chip.dataset.label); });
-  if (window.firestoreDb) await loadFirestore();
+  watchFirestore();
   if (window.location.hash === "#historico") selectedClassId = "history";
   const savedProfile = sessionStorage.getItem("innovaCoinsActiveProfile");
   if (savedProfile) { const savedProfileData = JSON.parse(savedProfile); activeProfile = profiles.find(profile => profile.id === savedProfileData.id) || savedProfileData; selectedActor = activeProfile.name; if (calendarProfessorNames().includes(activeProfile.name)) selectedCalendarProfessor = activeProfile.name; sessionStorage.setItem("innovaCoinsActiveProfile", JSON.stringify(activeProfile)); document.getElementById("pin-screen").classList.add("hidden"); }
