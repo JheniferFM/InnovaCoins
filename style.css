@@ -854,10 +854,10 @@ button{ font-family: inherit; }
 @keyframes ambient-fall{ 0%{ opacity:0; transform:translate3d(0,-10px,0) rotate(0deg); } 10%{ opacity:.5; } 80%{ opacity:.35; } 100%{ opacity:0; transform:translate3d(35px,900px,0) rotate(520deg); } }
 @media (prefers-reduced-motion:reduce){ .ambient-confetti span{ animation:none; display:none; } }
 .overview-dashboards{ display:grid; gap:18px; margin-top:24px; }
-.turma-card.turma-theme-curiosity,.overview-page .podio-card.turma-theme-curiosity{ background:linear-gradient(135deg,rgba(255,201,60,.18),rgba(47,26,103,.88)); border-color:rgba(255,201,60,.58); }
-.turma-card.turma-theme-discovery,.overview-page .podio-card.turma-theme-discovery{ background:linear-gradient(135deg,rgba(79,209,255,.18),rgba(47,26,103,.88)); border-color:rgba(79,209,255,.58); }
-.turma-card.turma-theme-pioneer,.overview-page .podio-card.turma-theme-pioneer{ background:linear-gradient(135deg,rgba(51,225,176,.18),rgba(47,26,103,.88)); border-color:rgba(51,225,176,.58); }
-.turma-card.turma-theme-challenger,.overview-page .podio-card.turma-theme-challenger{ background:linear-gradient(135deg,rgba(255,92,138,.18),rgba(47,26,103,.88)); border-color:rgba(255,92,138,.58); }
+.turma-card.turma-theme-curiosity,.overview-page .podio-card.turma-theme-curiosity{ background:linear-gradient(135deg,rgba(255,201,60,.42),rgba(118,79,12,.96)); border-color:rgba(255,218,112,.96); box-shadow:inset 0 0 18px rgba(255,201,60,.16),var(--shadow-soft); }
+.turma-card.turma-theme-discovery,.overview-page .podio-card.turma-theme-discovery{ background:linear-gradient(135deg,rgba(79,209,255,.42),rgba(19,78,119,.96)); border-color:rgba(132,226,255,.96); box-shadow:inset 0 0 18px rgba(79,209,255,.16),var(--shadow-soft); }
+.turma-card.turma-theme-pioneer,.overview-page .podio-card.turma-theme-pioneer{ background:linear-gradient(135deg,rgba(51,225,176,.42),rgba(16,96,72,.96)); border-color:rgba(111,255,210,.96); box-shadow:inset 0 0 18px rgba(51,225,176,.16),var(--shadow-soft); }
+.turma-card.turma-theme-challenger,.overview-page .podio-card.turma-theme-challenger{ background:linear-gradient(135deg,rgba(185,140,255,.48),rgba(87,49,138,.96)); border-color:rgba(211,184,255,.95); box-shadow:inset 0 0 18px rgba(185,140,255,.16),var(--shadow-soft); }
 .turma-card.turma-theme-other,.overview-page .podio-card.turma-theme-other{ background:linear-gradient(135deg,rgba(185,140,255,.18),rgba(47,26,103,.88)); border-color:rgba(185,140,255,.58); }
 .dashboard-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
 .dashboard-card{ display:grid; min-height:126px; padding:18px; align-content:center; gap:5px; border:1px solid var(--border); border-radius:14px; background:#25185a; box-shadow:var(--shadow-soft); }
