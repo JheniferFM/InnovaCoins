@@ -2,27 +2,25 @@
 
 Painel para gerenciar turmas, professores, alunos, coins, histórico, chamada, calendário e pódio por nome de guerra.
 
-## Dados compartilhados pelo GitHub
+## Supabase
 
-O painel guarda os dados no arquivo `data/database.json` deste repositório. A função `api/database.js`, publicada pela Vercel, lê e atualiza o arquivo pela API do GitHub. Não é necessário configurar Firebase nem outro banco de dados.
+O painel usa o Supabase para compartilhar turmas, alunos, pontuações, chamadas, calendário, prêmios e perfis entre computadores.
 
-Para configurar:
+1. Crie um projeto no [Supabase](https://supabase.com/dashboard).
+2. Abra **SQL Editor → New query**, copie todo o arquivo [`supabase/setup.sql`](./supabase/setup.sql) e execute. Ele cria a tabela e as regras de leitura/escrita, inicializa os perfis padrão sem apagar dados que já existam e habilita o canal de atualizações em tempo real.
+3. A URL e a chave **Publishable** (`sb_publishable_...`) estão configuradas em `config.js`. Essa chave foi feita para ser pública e pode ficar no código. **Nunca use nem publique uma chave Secret.**
+4. Publique o repositório na Vercel. Como as credenciais públicas estão no `config.js`, não é necessário configurar variáveis de ambiente da Vercel.
+5. Abra o painel. Se a tabela estiver vazia, entre com um perfil válido para inicializar os dados locais desse computador. Quando já houver dados compartilhados, esses dados são carregados do Supabase.
 
-1. Importe este repositório como um projeto na Vercel e publique na branch `main`. A Vercel reconhece automaticamente a função em `api/database.js`.
-2. Crie no GitHub um token fine-grained limitado ao repositório `InnovaCoins`, com a permissão **Contents: Read and write**.
-3. No projeto da Vercel, abra **Settings → Environment Variables** e adicione `GITHUB_TOKEN` com o token. **Não adicione o token ao código ou ao repositório.**
-4. `GITHUB_REPOSITORY` usa `JheniferFM/InnovaCoins` por padrão e `GITHUB_BRANCH` usa `main`. Configure essas variáveis somente se estiver usando outro repositório ou branch.
-5. Faça um novo deploy depois de configurar as variáveis.
+As alterações dos outros computadores chegam pelo Supabase Realtime, com uma consulta periódica de segurança. Se duas pessoas salvarem ao mesmo tempo, uma delas será avisada para não sobrescrever silenciosamente a atualização mais recente.
 
-Na primeira entrada com perfil e PIN válidos, os dados locais daquele computador são copiados para o arquivo compartilhado, caso ele ainda esteja vazio. Depois que o JSON já tiver dados, ele se torna a fonte compartilhada para os demais computadores. As alterações são verificadas periodicamente; cada gravação cria um commit no GitHub e pode iniciar outro deploy da Vercel.
+### Segurança dos perfis por PIN
 
-Se dois computadores tentarem gravar usando uma versão desatualizada, o painel avisa e atualiza os dados locais para evitar sobrescrever silenciosamente a versão mais recente. Refaça a alteração avisada após a atualização. O arquivo tem limite de 900 KB, incluindo fotos de prêmios.
-
-Leituras do JSON são públicas. Para gravar, a API exige um perfil e PIN válidos e usa o token do GitHub apenas no servidor da Vercel. O PIN é uma proteção simples do painel, não substitui autenticação forte para dados confidenciais.
+O painel mantém a entrada por perfil e PIN já existente. Como esses perfis não são contas autenticadas pelo Supabase, os dados compartilhados e os PINs da aplicação não devem ser considerados privados ou seguros contra alguém que inspecione o site. A tabela permite leitura pública, mas não permite escrita direta: gravações passam pela função `save_innova_state`, que valida o PIN e a revisão do dado. Para informações confidenciais, a aplicação precisa migrar para contas individuais do Supabase Auth.
 
 ## Uso local
 
-Abra `index.html` para experimentar a interface. Sem a função publicada pela Vercel, as alterações ficam somente no armazenamento local daquele navegador e não são compartilhadas.
+Abra `index.html` para experimentar a interface. Para compartilhar e sincronizar dados, use a versão publicada na Vercel e execute o SQL de configuração do Supabase.
 
 ## Recursos
 
@@ -31,4 +29,4 @@ Abra `index.html` para experimentar a interface. Sem a função publicada pela V
 - Registrar coins positivos e negativos com data, motivo e histórico.
 - Ranking de alunos e pódio geral de turmas.
 - Chamada, calendário, prêmios e histórico.
-- Armazenamento local offline e sincronização compartilhada pelo arquivo JSON no GitHub.
+- Armazenamento local offline e sincronização compartilhada pelo Supabase.

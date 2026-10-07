@@ -111,6 +111,7 @@ let sharedReadInFlight = false;
 let sharedSyncRunning = false;
 let sharedSyncPending = false;
 let appHasRendered = false;
+let supabaseRealtimeChannel = null;
 
 function uid(prefix) { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`; }
 function localDateString(date = new Date()) { const offset = date.getTimezoneOffset(); return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10); }
@@ -279,20 +280,25 @@ function updateProfileOptions() {
 }
 async function loadSharedData(force = false) {
   if (sharedReadInFlight || (sharedSyncRunning && !force)) return;
+  if (!window.innovaSupabaseClient) return;
   sharedReadInFlight = true;
   try {
-    const headers = sharedRevision ? { "If-None-Match": `"${sharedRevision}"` } : {};
-    const response = await fetch("/api/database", { headers, cache: "no-store" });
-    if (response.status === 304) return;
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || `Falha ao ler os dados compartilhados (HTTP ${response.status}).`);
-    if (!Array.isArray(result.profiles) || typeof result.revision !== "string") {
-      throw new Error("A resposta do servidor está em formato inválido.");
+    const { data: result, error } = await window.innovaSupabaseClient
+      .from("innova_state")
+      .select("payload, updated_at")
+      .eq("id", "main")
+      .maybeSingle();
+    if (error) throw error;
+    if (!result) {
+      throw new Error("A tabela innova_state ainda não foi inicializada. Execute o SQL indicado no README.");
+    }
+    if (!Array.isArray(result.payload?.profiles) || typeof result.updated_at !== "string") {
+      throw new Error("Os dados compartilhados do Supabase estão em formato inválido.");
     }
     if ((sharedSyncPending || sharedSyncRunning) && !force) return;
 
-    sharedRevision = result.revision;
-    profiles = result.profiles;
+    sharedRevision = result.updated_at;
+    profiles = result.payload.profiles;
     updateProfileOptions();
     if (activeProfile) {
       activeProfile = profiles.find(profile => profile.id === activeProfile.id) || activeProfile;
@@ -300,9 +306,9 @@ async function loadSharedData(force = false) {
       selectedActor = activeProfile.name;
     }
 
-    if (result.database) {
-      if (!Array.isArray(result.database.classes)) throw new Error("O banco compartilhado não contém uma lista válida de turmas.");
-      const updatedDatabase = migrateDatabase(result.database);
+    if (result.payload.database) {
+      if (!Array.isArray(result.payload.database.classes)) throw new Error("O banco compartilhado não contém uma lista válida de turmas.");
+      const updatedDatabase = migrateDatabase(result.payload.database);
       const serializedDatabase = JSON.stringify(updatedDatabase);
       sharedDatabaseInitialized = true;
       if (JSON.stringify(database) !== serializedDatabase) {
@@ -324,37 +330,32 @@ async function loadSharedData(force = false) {
   }
 }
 function queueSharedSync() {
-  if (!activeProfile || !sharedRevision) return;
+  if (!activeProfile || !window.innovaSupabaseClient) return;
   sharedSyncPending = true;
   if (!sharedSyncRunning) void flushSharedSync();
 }
 async function flushSharedSync() {
-  if (sharedSyncRunning) return;
+  if (sharedSyncRunning || !window.innovaSupabaseClient) return;
   sharedSyncRunning = true;
   try {
     while (sharedSyncPending) {
       sharedSyncPending = false;
       const snapshot = JSON.parse(JSON.stringify(database));
-      const response = await fetch("/api/database", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          database: snapshot,
-          profileId: activeProfile.id,
-          pin: activeProfile.pin,
-          revision: sharedRevision
-        })
+      const { data: nextRevision, error } = await window.innovaSupabaseClient.rpc("save_innova_state", {
+        p_payload: { database: snapshot, profiles },
+        p_expected_updated_at: sharedRevision,
+        p_profile_id: activeProfile.id,
+        p_pin: activeProfile.pin
       });
-      const result = await response.json();
-      if (response.status === 409) {
+      if (error) throw error;
+      if (!nextRevision) {
         await loadSharedData(true);
         showToast("Outro computador salvou uma alteração. Os dados foram atualizados; refaça sua última alteração.", true);
         sharedSyncPending = false;
         break;
       }
-      if (!response.ok) throw new Error(result.error || `Falha ao salvar no GitHub (HTTP ${response.status}).`);
 
-      sharedRevision = result.revision;
+      sharedRevision = nextRevision;
       sharedDatabaseInitialized = true;
       if (JSON.stringify(database) !== JSON.stringify(snapshot)) sharedSyncPending = true;
     }
@@ -892,6 +893,18 @@ function compressImage(file) {
 document.addEventListener("DOMContentLoaded", async () => {
   await loadSharedData();
   updateProfileOptions();
+  if (window.innovaSupabaseClient) {
+    supabaseRealtimeChannel = window.innovaSupabaseClient
+      .channel("innova-state")
+      .on("postgres_changes", { event: "*", schema: "public", table: "innova_state", filter: "id=eq.main" }, () => {
+        void loadSharedData();
+      })
+      .subscribe(status => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.error("Não foi possível conectar às atualizações em tempo real do Supabase", status);
+        }
+      });
+  }
   document.getElementById("pin-submit").addEventListener("click", enterWithPin);
   document.getElementById("profile-pin").addEventListener("keydown", event => { if (event.key === "Enter") enterWithPin(); });
   document.getElementById("change-profile-btn").addEventListener("click", changeProfile);
@@ -922,7 +935,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (activeProfile && !sharedDatabaseInitialized) queueSharedSync();
   setInterval(() => {
     if (!sharedSyncRunning && !sharedSyncPending) void loadSharedData();
-  }, 10000);
+  }, 30000);
   setInterval(() => {
     const today = localDateString();
     if (today !== lastObservedLocalDate) {
