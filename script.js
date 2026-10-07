@@ -43,6 +43,15 @@ const DEFAULT_CLASSES = [
   { id: "sabado-discovery-13h", nome: "Discovery", guerra: "", dia: "Sábado", horario: "13h", professores: ["Matheus"], alunos: ["Gabriel Merten Pereira", "Theo Richard Almeida Jordão"] }
 ];
 
+const JHENI_ADDITIONAL_ROSTER = [
+  { nome: "Pioneer Online", dia: "Quarta-feira", horario: "9h", alunos: ["Artur Sanção Ribeiro", "Davi Ferreira Andrade Ricardo", "Rafael Dias de Menezes", "Luna"] },
+  { nome: "Challenger Online", dia: "Quinta-feira", horario: "14h", alunos: ["Henrique Justi Poliseli Scopel", "Lucas Lira", "Nicholas Ury Castro Melo"] },
+  { nome: "Challenger", dia: "Quinta-feira", horario: "16h", alunos: ["Francisco Wellyton da Silva", "Victor Vieira de Queiroga", "Lucas"] },
+  { nome: "Discovery", dia: "Quinta-feira", horario: "14h", alunos: ["Ísis Figueiredo Rodrigues", "João Luís Azeredo Dias", "Josebe Moura Rocha", "Sara Ferreira Barros", "Santiago Nina Pedrouzo Perez"] },
+  { nome: "Pioneer Online", dia: "Quinta-feira", horario: "16h", alunos: ["Pedro Monteiro"] },
+  { nome: "Pioneer Online", dia: "Quinta-feira", horario: "15h", alunos: ["Arthur Baruc Santos"] }
+];
+
 const JHENI_ROSTER = [
   { nome: "Challenger", dia: "Terça-feira", horario: "16h", alunos: ["Francisco Wellyton da Silva", "Victor Vieira de Queiroga", "Lucas"] },
   { nome: "Discovery", dia: "Quarta-feira", horario: "14h", alunos: ["Ísis Figueiredo Rodrigues", "João Luís Azeredo Dias", "Josebe Moura Rocha", "Sara Ferreira Barros", "Santiago Nina Pedrouzo Perez"] },
@@ -52,7 +61,8 @@ const JHENI_ROSTER = [
   { nome: "Discovery", dia: "Sábado", horario: "8h", alunos: ["Isaac Cassiano de Oliveira", "Katarina Lucena Bahia", "Miguel Henrique de Oliveira Arruda"] },
   { nome: "Pioneer", dia: "Sábado", horario: "10h", alunos: ["Bryan Victor De Caldeira Lima", "Cecília", "Julia Santos Oliveira"] },
   { nome: "Curiosity", dia: "Sábado", horario: "13h", alunos: ["Athos Raphael Barreto De Oliveira", "Kaleo Luíz Camurça Fragoso e Barros", "Rebeca Rocha Rosário"] },
-  { nome: "Pioneer", dia: "Sábado", horario: "13h", alunos: ["Arthur Baruc Santos"] }
+  { nome: "Pioneer", dia: "Sábado", horario: "13h", alunos: ["Arthur Baruc Santos"] },
+  ...JHENI_ADDITIONAL_ROSTER
 ];
 
 const LUCAS_ROSTER = [
@@ -93,14 +103,14 @@ function loadDatabase() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved && Array.isArray(saved.classes)) {
-      const migrated = applyMatheusPhoto(applyLucasRoster(applyJheniRoster(normalizeDatabase(saved))));
+      const migrated = applyMatheusPhoto(applyJheniScheduleAdditions(applyLucasRoster(applyJheniRoster(normalizeDatabase(saved)))));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
       return migrated;
     }
   } catch (error) { console.warn("Banco local indisponível", error); }
-  const initial = applyMatheusPhoto(applyLucasRoster(applyJheniRoster(normalizeDatabase({
+  const initial = applyMatheusPhoto(applyJheniScheduleAdditions(applyLucasRoster(applyJheniRoster(normalizeDatabase({
     classes: DEFAULT_CLASSES.map(item => ({ id: item.id, nome: item.nome, guerra: item.guerra, dia: item.dia, horario: item.horario, professores: item.professores, students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }))
-  }))));
+  })))));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
   return initial;
 }
@@ -115,6 +125,15 @@ function applyJheniRoster(data) {
   const existingClasses = data.classes.map(turma => ({ ...turma, professores: (turma.professores || []).filter(name => name !== "Jheni") })).filter(turma => turma.professores.length > 0);
   const newClasses = JHENI_ROSTER.map(item => ({ id: uid("class"), nome: item.nome, guerra: "", dia: item.dia, horario: item.horario, professores: ["Jheni"], students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }));
   return { ...data, classes: [...existingClasses, ...newClasses], migrations: { ...(data.migrations || {}), jheniRoster20260924c: true } };
+}
+function applyJheniScheduleAdditions(data) {
+  if (data.migrations?.jheniScheduleAdditions20261006b) return data;
+  const updatedClasses = [...data.classes];
+  JHENI_ADDITIONAL_ROSTER.forEach(item => {
+    const alreadyExists = updatedClasses.some(turma => turma.nome === item.nome && turma.dia === item.dia && turma.horario === item.horario && (turma.professores || []).includes("Jheni"));
+    if (!alreadyExists) updatedClasses.push({ id: uid("class"), nome: item.nome, guerra: "", dia: item.dia, horario: item.horario, professores: ["Jheni"], students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) });
+  });
+  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), jheniScheduleAdditions20261006b: true } };
 }
 function applyLucasRoster(data) {
   if (data.migrations?.lucasRoster20261001a) return data;
@@ -163,11 +182,21 @@ function enterWithPin() {
 }
 function changeProfile() { activeProfile = null; selectedActor = ""; sessionStorage.removeItem("innovaCoinsActiveProfile"); document.getElementById("profile-pin").value = ""; showPinScreen(); }
 
+function applyTurmaThemes() {
+  document.querySelectorAll(".turma-card, .podio-card").forEach(card => {
+    const classLabel = card.classList.contains("podio-card") ? card.querySelectorAll("p")[1]?.textContent || "" : card.querySelector("p")?.textContent || "";
+    const normalizedName = classLabel.toLowerCase();
+    const category = ["curiosity", "discovery", "pioneer", "challenger"].find(item => normalizedName.includes(item)) || "other";
+    card.classList.add(`turma-theme-${category}`);
+  });
+}
+
 function render() {
   renderSidebar();
   const total = classes().reduce((sum, turma) => sum + pointsTotal(turma), 0);
   document.getElementById("header-total").innerHTML = `<strong>${total}</strong> coins distribuídos ao todo`;
   document.getElementById("content").innerHTML = selectedProfessorId ? professorHtml(selectedProfessorId) : selectedClassId === "overview" ? overviewHtml() : selectedClassId === "best-students" ? bestStudentsHtml() : selectedClassId === "history" ? historyHtml() : selectedClassId === "awards" ? awardsHtml() : selectedClassId === "attendance" ? attendanceHtml() : selectedClassId === "attendance-history" ? attendanceHistoryHtml() : selectedClassId === "direction-absences" && activeProfile?.id === "direcao" ? directionAbsencesHtml() : classHtml(findClass(selectedClassId));
+  applyTurmaThemes();
   bindContentEvents();
   if (selectedClassId === "overview" && !selectedProfessorId) addAmbientConfetti();
   if (selectedClassId === "requests") loadRequests();
@@ -522,8 +551,10 @@ async function loadFirestore() {
   try {
     const snapshot = await window.firestoreDb.collection("innova").doc("database").get();
     if (snapshot.exists && Array.isArray(snapshot.data().classes)) {
-      database = applyMatheusPhoto(applyLucasRoster(applyJheniRoster(normalizeDatabase(snapshot.data()))));
+      const remoteData = snapshot.data();
+      database = applyMatheusPhoto(applyJheniScheduleAdditions(applyLucasRoster(applyJheniRoster(normalizeDatabase(remoteData)))));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(database));
+      if (JSON.stringify(remoteData) !== JSON.stringify(database)) await syncFirestore(database);
     }
   } catch (error) { console.warn("Leitura do Firebase indisponível", error); }
 }
