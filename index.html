@@ -70,6 +70,9 @@
     <button class="nav-item nav-schedule" data-turma="schedule">
       <span class="nav-item-label">🗓️ Grade horária</span>
     </button>
+    <button class="nav-item nav-monthly-calendar" data-turma="monthly-calendar">
+      <span class="nav-item-label">📆 Calendário mensal</span>
+    </button>
     <button class="nav-item nav-direction-absences" data-turma="direction-absences" hidden>
       <span class="nav-item-label">📋 Faltas do dia</span>
     </button>
@@ -93,6 +96,31 @@
   <main class="content" id="content" aria-live="polite">
     <!-- Conteúdo dinâmico será inserido aqui -->
   </main>
+</div>
+
+<!-- MODAL: Marcar dia no calendário -->
+<div class="modal-overlay" id="modal-calendar-overlay">
+  <div class="modal modal-calendar" role="dialog" aria-labelledby="calendar-day-title">
+    <div class="modal-head">
+      <h2 id="calendar-day-title">Marcar dia</h2>
+      <button class="btn-close" data-close="modal-calendar" aria-label="Fechar">✕</button>
+    </div>
+    <div class="modal-body">
+      <fieldset class="calendar-color-fieldset">
+        <legend>Cor do dia</legend>
+        <div class="calendar-color-options" id="calendar-color-options"></div>
+      </fieldset>
+      <div class="form-group">
+        <label for="calendar-day-legend">Legenda</label>
+        <input type="text" id="calendar-day-legend" maxlength="100" placeholder="Ex.: Reunião pedagógica">
+      </div>
+    </div>
+    <div class="modal-foot calendar-modal-foot">
+      <button class="btn btn-danger" id="calendar-clear-day" type="button">Limpar marcação</button>
+      <div><button class="btn btn-ghost" data-close="modal-calendar">Cancelar</button>
+      <button class="btn btn-primary" id="calendar-save-day" type="button">Salvar dia</button></div>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL: Adicionar prêmio -->

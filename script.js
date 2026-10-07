@@ -25,6 +25,13 @@ const COINS = [
   { label: "Uso inadequado de linguagem", points: -5 },
   { label: "Não entrega das atividades ou desafios", points: -5 }
 ];
+const CALENDAR_COLORS = [
+  { id: "yellow", label: "Amarelo" },
+  { id: "blue", label: "Azul" },
+  { id: "green", label: "Verde" },
+  { id: "purple", label: "Roxo" },
+  { id: "pink", label: "Rosa" }
+];
 const DEFAULT_PROFILES = [
   { id: "admin", name: "Administrador", pin: "804272" },
   { id: "matheus", name: "Matheus", pin: "391658" },
@@ -44,10 +51,9 @@ const DEFAULT_CLASSES = [
 ];
 
 const JHENI_ADDITIONAL_ROSTER = [
+  { nome: "Pioneer Online", dia: "Terça-feira", horario: "14h", alunos: ["Arthur", "Nicolas Frederico Blind"] },
   { nome: "Pioneer Online", dia: "Quarta-feira", horario: "9h", alunos: ["Artur Sanção Ribeiro", "Davi Ferreira Andrade Ricardo", "Rafael Dias de Menezes", "Luna"] },
   { nome: "Challenger Online", dia: "Quinta-feira", horario: "14h", alunos: ["Henrique Justi Poliseli Scopel", "Lucas Lira", "Nicholas Ury Castro Melo"] },
-  { nome: "Challenger", dia: "Quinta-feira", horario: "16h", alunos: ["Francisco Wellyton da Silva", "Victor Vieira de Queiroga", "Lucas"] },
-  { nome: "Discovery", dia: "Quinta-feira", horario: "14h", alunos: ["Ísis Figueiredo Rodrigues", "João Luís Azeredo Dias", "Josebe Moura Rocha", "Sara Ferreira Barros", "Santiago Nina Pedrouzo Perez"] },
   { nome: "Pioneer Online", dia: "Quinta-feira", horario: "16h", alunos: ["Pedro Monteiro", "Arthur Baruc Santos"] }
 ];
 
@@ -60,13 +66,12 @@ const JHENI_ROSTER = [
   { nome: "Discovery", dia: "Sábado", horario: "8h", alunos: ["Isaac Cassiano de Oliveira", "Katarina Lucena Bahia", "Miguel Henrique de Oliveira Arruda"] },
   { nome: "Pioneer", dia: "Sábado", horario: "10h", alunos: ["Bryan Victor De Caldeira Lima", "Cecília", "Julia Santos Oliveira"] },
   { nome: "Curiosity", dia: "Sábado", horario: "13h", alunos: ["Athos Raphael Barreto De Oliveira", "Kaleo Luíz Camurça Fragoso e Barros", "Rebeca Rocha Rosário"] },
-  { nome: "Pioneer", dia: "Sábado", horario: "13h", alunos: ["Arthur Baruc Santos"] },
+  { nome: "Pioneer", dia: "Sábado", horario: "15h", alunos: ["Arthur Baruc Santos"] },
   ...JHENI_ADDITIONAL_ROSTER
 ];
 
 const LUCAS_ROSTER = [
   { nome: "Pioneer 2 L5", dia: "Quinta-feira", horario: "09h", alunos: ["Heitor Pereira da Silva", "Santhiago Reis Mota dos Santos"] },
-  { nome: "Pioneer 3 L5", dia: "Sábado", horario: "13h", alunos: ["Davi José Moura da Silva", "Enzo de Campos Oliveira", "Gabryela Da Silva Ferraz", "Guilherme Marinho Cabral", "Miguel Davi de Almeida Varela", "Sandoval de Queiroz Miguel"] },
   { nome: "Pioneer 4 L2", dia: "Quarta-feira", horario: "14h", alunos: ["Ana Carolina de Oliveira Sena", "Arthur Aguiar Cruz", "Artur Rocha de Oliveira", "Eduardo Pedrouzo Perez Neto", "Enzo Eduardo Cardoso de Oliveira", "Gabriel Moraes dos Santos", "Henrique de Souza Leite", "Marya Alice Nogueira Santiago", "Ryan Pereira de Castro"] },
   { nome: "Pioneer 4 L2", dia: "Sexta-feira", horario: "09h", alunos: ["Benjamin Moro Redeschi Buss", "Kauan Gabriel Macedo Silva", "Laila Figueiredo Rodrigues Parreira", "Santhiago Reis Mota dos Santos"] },
   { nome: "Pioneer 4 L5", dia: "Sexta-feira", horario: "14h", alunos: ["Anna Júlia Bolzani Soares", "Arthur Melo Carvalho", "Benjamin Moro Redeschi Buss", "Davi Félix Ferreira Xavier", "Davi Miguel de Castro Crispim", "Gabriel Asafe da Silva Neves", "Lucas Ozeias Medeiros", "Pedro Euclides Simões Noronha", "Pedro Mendes de Souza"] },
@@ -77,6 +82,8 @@ const LUCAS_ROSTER = [
   { nome: "Challenger 4 L2", dia: "Sábado", horario: "15h", alunos: ["Ayla Monteiro Barbosa de Souza", "Emanuel Barreto de Souza", "Miguel Camelo Ferreira", "Miguel Oliveira de Lima", "Samara Cristine Golçalves de Lima"] }
 ];
 
+const LUCAS_PIONEER3L5_ROSTER = { nome: "Pioneer 3 L5", dia: "Sábado", horario: "13h", alunos: ["Davi José Moura da Silva", "Enzo de Campos Oliveira", "Gabryela Da Silva Ferraz", "Guilherme Marinho Cabral", "Miguel Davi de Almeida Varela", "Sandoval de Queiroz Miguel"] };
+
 let database = loadDatabase();
 let selectedClassId = "overview";
 let selectedProfessorId = null;
@@ -86,6 +93,9 @@ let attendanceProfessorId = "all";
 let attendanceDate = new Date().toISOString().slice(0, 10);
 let directionAbsenceDate = localDateString();
 let lastObservedLocalDate = directionAbsenceDate;
+let selectedCalendarMonth = localDateString().slice(0, 7);
+let selectedCalendarProfessor = "";
+let editingCalendarDate = null;
 let awardSlide = 0;
 let activeStudentId = null;
 let editingClassId = null;
@@ -102,14 +112,14 @@ function loadDatabase() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved && Array.isArray(saved.classes)) {
-      const migrated = applyMatheusPhoto(applyJheniPioneerArthurMove(applyJheniScheduleAdditions(applyLucasRoster(applyJheniRoster(normalizeDatabase(saved))))));
+      const migrated = migrateDatabase(saved);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
       return migrated;
     }
   } catch (error) { console.warn("Banco local indisponível", error); }
-  const initial = applyMatheusPhoto(applyJheniPioneerArthurMove(applyJheniScheduleAdditions(applyLucasRoster(applyJheniRoster(normalizeDatabase({
+  const initial = migrateDatabase({
     classes: DEFAULT_CLASSES.map(item => ({ id: item.id, nome: item.nome, guerra: item.guerra, dia: item.dia, horario: item.horario, professores: item.professores, students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }))
-  }))))));
+  });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
   return initial;
 }
@@ -117,7 +127,7 @@ function normalizeDatabase(data) {
   const classesData = (data.classes || []).map(turma => ({ ...turma, professores: (turma.professores || []).map(name => name === "Jhenifer" ? "Jheni" : name), students: (turma.students || turma.alunos || []).map(aluno => typeof aluno === "string" ? { id: uid("student"), name: aluno, points: 0, history: [] } : aluno) }));
   const names = [...(data.professors || []).map(professor => professor.name), ...classesData.flatMap(turma => turma.professores || []), "Matheus", "Jheni", "Lucas"];
   const uniqueNames = [...new Set(names.filter(Boolean))];
-  return { ...data, classes: classesData, awards: Array.isArray(data.awards) ? data.awards : [], attendance: data.attendance || {}, professors: uniqueNames.map(name => { const professor = (data.professors || []).find(item => item.name === name) || { id: uid("professor"), name }; return name === "Jheni" && !professor.photo ? { ...professor, photo: "unnamed (1).jpg" } : professor; }) };
+  return { ...data, classes: classesData, awards: Array.isArray(data.awards) ? data.awards : [], attendance: data.attendance || {}, monthlyCalendars: data.monthlyCalendars || {}, professors: uniqueNames.map(name => { const professor = (data.professors || []).find(item => item.name === name) || { id: uid("professor"), name }; return name === "Jheni" && !professor.photo ? { ...professor, photo: "unnamed (1).jpg" } : professor; }) };
 }
 function applyJheniRoster(data) {
   if (data.migrations?.jheniRoster20260924c) return data;
@@ -154,14 +164,94 @@ function applyJheniPioneerArthurMove(data) {
   }
   return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), jheniPioneerArthurMove20261006a: true } };
 }
+function applyJheniRemoveThursdayClasses(data) {
+  if (data.migrations?.jheniRemoveThursdayClasses20261006a) return data;
+  const updatedClasses = data.classes.flatMap(turma => {
+    const isJheniClass = (turma.professores || []).includes("Jheni");
+    const isRemovedClass = (turma.nome === "Challenger" && turma.dia === "Quinta-feira" && turma.horario === "16h") || (turma.nome === "Discovery" && turma.dia === "Quinta-feira" && turma.horario === "14h");
+    if (!isJheniClass || !isRemovedClass) return [turma];
+    const remainingProfessors = turma.professores.filter(name => name !== "Jheni");
+    return remainingProfessors.length ? [{ ...turma, professores: remainingProfessors }] : [];
+  });
+  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), jheniRemoveThursdayClasses20261006a: true } };
+}
+function applyJheniTuesdayPioneerOnline(data) {
+  if (data.migrations?.jheniTuesdayPioneerOnline20261006a) return data;
+  const roster = JHENI_ADDITIONAL_ROSTER.find(item => item.nome === "Pioneer Online" && item.dia === "Terça-feira" && item.horario === "14h");
+  const updatedClasses = [...data.classes];
+  const existingClassIndex = updatedClasses.findIndex(turma => turma.nome === roster.nome && turma.dia === roster.dia && turma.horario === roster.horario && (turma.professores || []).includes("Jheni"));
+  if (existingClassIndex >= 0) {
+    const existingClass = updatedClasses[existingClassIndex];
+    const existingStudentNames = new Set(students(existingClass).map(aluno => aluno.name));
+    const missingStudents = roster.alunos.filter(name => !existingStudentNames.has(name)).map(name => ({ id: uid("student"), name, points: 0, history: [] }));
+    if (missingStudents.length) updatedClasses[existingClassIndex] = { ...existingClass, students: [...students(existingClass), ...missingStudents] };
+  } else {
+    updatedClasses.push({ id: uid("class"), nome: roster.nome, guerra: "", dia: roster.dia, horario: roster.horario, professores: ["Jheni"], students: roster.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) });
+  }
+  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), jheniTuesdayPioneerOnline20261006a: true } };
+}
 function applyLucasRoster(data) {
   if (data.migrations?.lucasRoster20261001a) return data;
   const newClasses = LUCAS_ROSTER.map(item => ({ id: uid("class"), nome: item.nome, guerra: "", dia: item.dia, horario: item.horario, professores: ["Lucas"], students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }));
   return { ...data, classes: [...data.classes, ...newClasses], migrations: { ...(data.migrations || {}), lucasRoster20261001a: true } };
 }
+function applyMatheusChallenger4L2(data) {
+  if (data.migrations?.matheusChallenger4L2_20261006a) return data;
+  const roster = LUCAS_ROSTER.find(item => item.nome === "Challenger 4 L2" && item.dia === "Sábado" && item.horario === "15h");
+  const existingClass = data.classes.find(turma => turma.nome === roster.nome && turma.dia === roster.dia && turma.horario === roster.horario);
+  const updatedClasses = existingClass
+    ? data.classes.map(turma => turma.id === existingClass.id ? { ...turma, professores: [...new Set([...(turma.professores || []), "Lucas", "Matheus"])] } : turma)
+    : [...data.classes, { id: uid("class"), nome: roster.nome, guerra: "", dia: roster.dia, horario: roster.horario, professores: ["Lucas", "Matheus"], students: roster.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }];
+  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), matheusChallenger4L2_20261006a: true } };
+}
+function applyLucasPioneer3L5Time(data) {
+  if (data.migrations?.lucasPioneer3L5Time20261006a) return data;
+  const existingClass = data.classes.find(turma => turma.nome === "Pioneer 3 L5" && turma.dia === "Sábado" && (turma.professores || []).includes("Lucas"));
+  const updatedClasses = existingClass
+    ? data.classes.map(turma => turma.id === existingClass.id ? { ...turma, horario: "15h" } : turma)
+    : data.classes;
+  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), lucasPioneer3L5Time20261006a: true } };
+}
+function applyJheniPioneerSaturday15(data) {
+  if (data.migrations?.jheniPioneerSaturday15_20261006a) return data;
+  const roster = JHENI_ROSTER.find(item => item.nome === "Pioneer" && item.dia === "Sábado" && item.alunos.includes("Arthur Baruc Santos"));
+  const existingClass = data.classes.find(turma => turma.nome === roster.nome && turma.dia === roster.dia && (turma.professores || []).includes("Jheni") && students(turma).some(aluno => aluno.name === "Arthur Baruc Santos"))
+    || data.classes.find(turma => turma.nome === roster.nome && turma.dia === roster.dia && turma.horario === "13h" && (turma.professores || []).includes("Jheni"));
+  let updatedClasses;
+  if (existingClass) {
+    const existingStudentNames = new Set(students(existingClass).map(aluno => aluno.name));
+    const missingStudents = roster.alunos.filter(name => !existingStudentNames.has(name)).map(name => ({ id: uid("student"), name, points: 0, history: [] }));
+    updatedClasses = data.classes.map(turma => turma.id === existingClass.id ? { ...turma, horario: "15h", students: [...students(turma), ...missingStudents] } : turma);
+  } else {
+    updatedClasses = [...data.classes, { id: uid("class"), nome: roster.nome, guerra: "", dia: roster.dia, horario: "15h", professores: ["Jheni"], students: roster.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }];
+  }
+  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), jheniPioneerSaturday15_20261006a: true } };
+}
+function applyLucasPioneer3L5At13(data) {
+  if (data.migrations?.lucasPioneer3L5At13_20261006a) return data;
+  const existingClass = data.classes.find(turma => turma.nome === LUCAS_PIONEER3L5_ROSTER.nome && turma.dia === LUCAS_PIONEER3L5_ROSTER.dia);
+  const updatedClasses = existingClass
+    ? data.classes.map(turma => turma.id === existingClass.id ? { ...turma, horario: "13h", professores: ["Lucas"] } : turma)
+    : [...data.classes, { id: uid("class"), nome: LUCAS_PIONEER3L5_ROSTER.nome, guerra: "", dia: LUCAS_PIONEER3L5_ROSTER.dia, horario: "13h", professores: ["Lucas"], students: LUCAS_PIONEER3L5_ROSTER.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }];
+  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), lucasPioneer3L5At13_20261006a: true } };
+}
 function applyMatheusPhoto(data) {
   if (data.migrations?.matheusPhoto20261006) return data;
   return { ...data, professors: data.professors.map(professor => professor.name.toLowerCase() === "matheus" ? { ...professor, photo: MATHEUS_PHOTO } : professor), migrations: { ...(data.migrations || {}), matheusPhoto20261006: true } };
+}
+function migrateDatabase(data) {
+  let migrated = normalizeDatabase(data);
+  migrated = applyJheniRoster(migrated);
+  migrated = applyLucasRoster(migrated);
+  migrated = applyMatheusChallenger4L2(migrated);
+  migrated = applyJheniScheduleAdditions(migrated);
+  migrated = applyJheniPioneerArthurMove(migrated);
+  migrated = applyJheniRemoveThursdayClasses(migrated);
+  migrated = applyJheniTuesdayPioneerOnline(migrated);
+  migrated = applyLucasPioneer3L5Time(migrated);
+  migrated = applyJheniPioneerSaturday15(migrated);
+  migrated = applyLucasPioneer3L5At13(migrated);
+  return applyMatheusPhoto(migrated);
 }
 function saveDatabase() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(database));
@@ -194,6 +284,7 @@ function enterWithPin() {
   if (!profile || pin !== profile.pin) { document.getElementById("pin-message").textContent = "Perfil ou PIN incorreto."; return; }
   activeProfile = profile;
   selectedActor = profile.name;
+  if (calendarProfessorNames().includes(profile.name)) selectedCalendarProfessor = profile.name;
   sessionStorage.setItem("innovaCoinsActiveProfile", JSON.stringify(profile));
   document.getElementById("pin-message").textContent = "";
   document.getElementById("pin-screen").classList.add("hidden");
@@ -220,28 +311,137 @@ function scheduleTimeLabel(minutes) {
   const minute = minutes % 60;
   return minute ? `${hour}:${String(minute).padStart(2, "0")}` : `${hour}h`;
 }
+function scheduleIntervalLabel(startMinutes, endMinutes) {
+  return `${scheduleTimeLabel(startMinutes)} às ${scheduleTimeLabel(endMinutes)}`;
+}
 function scheduleCellHtml(day, minutes, professorName) {
+  if (minutes === 12 * 60) return `<span class="schedule-lunch">Almoço</span>`;
   const scheduledClasses = classes().filter(turma => turma.dia === day && scheduleMinutes(turma.horario) === minutes && (turma.professores || []).includes(professorName));
+  if (day === "Sábado" && !scheduledClasses.length && !(minutes === 8 * 60 && professorName === "Lucas")) return "";
   if (!scheduledClasses.length) return `<span class="schedule-planning">Planejamento pedagógico</span>`;
   return scheduledClasses.map(turma => `<article class="schedule-class turma-theme-${turmaThemeByName(turma.nome)}"><strong>${escapeHtml(turma.nome)}</strong><span>${students(turma).length} alunos</span></article>`).join("");
 }
 function scheduleHtml() {
-  const weekdays = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira"];
+  const schedulesByDay = [
+    { day: "Terça-feira", slots: [[9, 10], [11, 12], [12, 13], [13, 14], [14, 16], [16, 18]] },
+    { day: "Quarta-feira", slots: [[9, 10], [11, 12], [12, 13], [13, 14], [14, 16], [16, 18]] },
+    { day: "Quinta-feira", slots: [[9, 10], [11, 12], [12, 13], [13, 14], [14, 16], [16, 18]] },
+    { day: "Sexta-feira", slots: [[9, 10], [11, 12], [12, 13], [13, 14], [14, 16], [16, 18]] },
+    { day: "Sábado", slots: [[8, 10], [10, 12], [12, 13], [13, 15], [15, 17]] }
+  ];
   const preferredProfessors = ["Jheni", "Matheus", "Lucas"];
   const assignedProfessors = new Set(classes().flatMap(turma => turma.professores || []));
   const extraProfessors = [...assignedProfessors].filter(name => !preferredProfessors.includes(name)).sort((a, b) => a.localeCompare(b, "pt-BR"));
   const professorNames = [...preferredProfessors, ...extraProfessors];
-  const weekdayClasses = classes().filter(turma => weekdays.includes(turma.dia));
-  const timeSlots = [...new Set(weekdayClasses.map(turma => scheduleMinutes(turma.horario)).filter(minutes => minutes !== null))].sort((a, b) => a - b);
-  const displaySlots = timeSlots.length ? timeSlots : [9 * 60];
-  return `<section class="schedule-page"><div class="secao-head"><div><p class="page-kicker">Visão semanal</p><h1>Grade horária dos professores</h1><p>Segunda a sexta-feira · horários e turmas lado a lado</p></div></div><div class="schedule-table-wrap" role="region" aria-label="Grade horária semanal; role para os lados para ver toda a tabela" tabindex="0"><table class="schedule-table"><thead><tr><th scope="col">Horário</th>${professorNames.map(name => `<th scope="col">${escapeHtml(name)}</th>`).join("")}</tr></thead><tbody>${weekdays.map(day => `<tr class="schedule-day-heading"><th colspan="${professorNames.length + 1}" scope="rowgroup">${day}</th></tr>${displaySlots.map(minutes => `<tr><th class="schedule-time" scope="row">${scheduleTimeLabel(minutes)}</th>${professorNames.map(name => `<td>${scheduleCellHtml(day, minutes, name)}</td>`).join("")}</tr>`).join("")}`).join("")}</tbody></table></div></section>`;
+  const dayRows = schedulesByDay.map(({ day, slots }) => {
+    const intervalRows = slots.map(([startHour, endHour]) => {
+      const startMinutes = startHour * 60;
+      const endMinutes = endHour * 60;
+      return `<tr><th class="schedule-time" scope="row">${scheduleIntervalLabel(startMinutes, endMinutes)}</th>${professorNames.map(name => `<td>${scheduleCellHtml(day, startMinutes, name)}</td>`).join("")}</tr>`;
+    }).join("");
+    return `<tr class="schedule-day-heading"><th colspan="${professorNames.length + 1}" scope="rowgroup">${day}</th></tr>${intervalRows}`;
+  }).join("");
+  return `<section class="schedule-page"><div class="secao-head"><div><p class="page-kicker">Visão semanal</p><h1>Grade horária dos professores</h1><p>Terça a sábado · horários e turmas lado a lado</p></div></div><div class="schedule-table-wrap" role="region" aria-label="Grade horária semanal com rolagem horizontal" tabindex="0"><table class="schedule-table"><thead><tr><th scope="col">Horário</th>${professorNames.map(name => `<th scope="col">${escapeHtml(name)}</th>`).join("")}</tr></thead><tbody>${dayRows}</tbody></table></div></section>`;
+}
+function calendarColor(colorId) { return CALENDAR_COLORS.find(color => color.id === colorId) || CALENDAR_COLORS[0]; }
+function calendarMonthLabel(monthKey) {
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+}
+function calendarProfessorNames() {
+  const preferredOrder = ["Jheni", "Matheus", "Lucas"];
+  const availableProfessors = new Set([...(database.professors || []).map(professor => professor.name), ...classes().flatMap(turma => turma.professores || [])]);
+  const preferred = preferredOrder.filter(name => availableProfessors.has(name));
+  const additional = [...availableProfessors].filter(name => !preferredOrder.includes(name)).sort((first, second) => first.localeCompare(second, "pt-BR"));
+  return [...preferred, ...additional];
+}
+function calendarMarksForProfessor(monthKey, professorName) {
+  const monthData = database.monthlyCalendars?.[monthKey] || {};
+  const legacyMarks = Object.fromEntries(Object.entries(monthData).filter(([key, mark]) => /^\d{4}-\d{2}-\d{2}$/.test(key) && mark && typeof mark === "object"));
+  return { ...legacyMarks, ...(monthData[professorName] || {}) };
+}
+function calendarHtml() {
+  const [year, month] = selectedCalendarMonth.split("-").map(Number);
+  const professorNames = calendarProfessorNames();
+  if (!professorNames.includes(selectedCalendarProfessor)) selectedCalendarProfessor = professorNames.includes(activeProfile?.name) ? activeProfile.name : professorNames[0] || "Jheni";
+  const monthIndex = month - 1;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstDayOffset = (new Date(year, monthIndex, 1).getDay() + 6) % 7;
+  const cellCount = Math.ceil((firstDayOffset + daysInMonth) / 7) * 7;
+  const today = localDateString();
+  const monthMarks = calendarMarksForProfessor(selectedCalendarMonth, selectedCalendarProfessor);
+  const weekdayLabels = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+  const calendarCells = Array.from({ length: cellCount }, (_, index) => {
+    const day = index - firstDayOffset + 1;
+    if (day < 1 || day > daysInMonth) return `<div class="calendar-day calendar-day-empty" aria-hidden="true"></div>`;
+    const date = `${selectedCalendarMonth}-${String(day).padStart(2, "0")}`;
+    const mark = monthMarks[date];
+    const color = calendarColor(mark?.color);
+    const description = mark ? String(mark.legend || color.label).trim() : "";
+    const accessibleLabel = mark ? `${day}, ${description}` : String(day);
+    return `<button class="calendar-day ${mark ? `is-marked color-${color.id}` : ""} ${date === today ? "is-today" : ""}" type="button" data-calendar-day="${date}" aria-label="${escapeHtml(accessibleLabel)}" title="${escapeHtml(description)}"><span class="calendar-day-number">${day}</span>${mark ? `<span class="calendar-day-caption">${escapeHtml(description)}</span>` : ""}</button>`;
+  }).join("");
+  const legendEntries = Object.entries(monthMarks).sort(([firstDate], [secondDate]) => firstDate.localeCompare(secondDate));
+  const legendList = legendEntries.map(([date, mark]) => {
+    const color = calendarColor(mark.color);
+    const day = Number(date.slice(-2));
+    const legend = String(mark.legend || color.label).trim();
+    return `<li><span class="calendar-legend-swatch color-${color.id}" aria-hidden="true"></span><time datetime="${date}">${day}</time><span>${escapeHtml(legend)}</span></li>`;
+  }).join("");
+  const [yearValue, monthValue] = selectedCalendarMonth.split("-");
+  const previousMonthDate = new Date(Number(yearValue), Number(monthValue) - 2, 1);
+  const nextMonthDate = new Date(Number(yearValue), Number(monthValue), 1);
+  const previousMonth = `${previousMonthDate.getFullYear()}-${String(previousMonthDate.getMonth() + 1).padStart(2, "0")}`;
+  const nextMonth = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, "0")}`;
+  return `<section class="calendar-page"><div class="secao-head calendar-screen-head"><div><p class="page-kicker">Organização financeira</p><h1>Calendário mensal</h1><p>Calendário compartilhado dos professores</p></div><div class="calendar-toolbar"><label class="calendar-teacher-picker"><span>Professor</span><select data-calendar-professor aria-label="Calendário do professor">${professorNames.map(name => `<option value="${escapeHtml(name)}" ${name === selectedCalendarProfessor ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><button class="btn btn-ghost" type="button" data-action="calendar-previous" aria-label="Mês anterior">←</button><input type="month" data-calendar-month value="${selectedCalendarMonth}" aria-label="Selecionar mês"><button class="btn btn-ghost" type="button" data-action="calendar-next" aria-label="Próximo mês">→</button><button class="btn btn-primary" type="button" data-action="calendar-print">Exportar PDF</button></div></div><div class="calendar-layout"><section class="calendar-sheet" aria-label="Calendário de ${escapeHtml(selectedCalendarProfessor)} em ${escapeHtml(calendarMonthLabel(selectedCalendarMonth))}"><header class="calendar-print-heading"><span>INNOVA COINS · FINANCEIRO · ${escapeHtml(selectedCalendarProfessor.toUpperCase())}</span><h2>${escapeHtml(calendarMonthLabel(selectedCalendarMonth))}</h2></header><div class="calendar-weekdays">${weekdayLabels.map(label => `<span>${label}</span>`).join("")}</div><div class="monthly-calendar-grid">${calendarCells}</div></section><aside class="calendar-legend"><div class="calendar-legend-heading"><span>${escapeHtml(selectedCalendarProfessor.toUpperCase())}</span><h2>Legendas do mês</h2></div><ul>${legendList || `<li class="calendar-empty-legend">Nenhuma data marcada neste mês.</li>`}</ul></aside></div></section>`;
+}
+function shiftCalendarMonth(offset) {
+  const [year, month] = selectedCalendarMonth.split("-").map(Number);
+  const shiftedDate = new Date(year, month - 1 + offset, 1);
+  selectedCalendarMonth = `${shiftedDate.getFullYear()}-${String(shiftedDate.getMonth() + 1).padStart(2, "0")}`;
+  render();
+}
+function openCalendarDay(date) {
+  editingCalendarDate = date;
+  const [year, month, day] = date.split("-").map(Number);
+  const dateLabel = new Date(year, month - 1, day).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+  const mark = calendarMarksForProfessor(selectedCalendarMonth, selectedCalendarProfessor)[date];
+  const selectedColor = calendarColor(mark?.color).id;
+  document.getElementById("calendar-day-title").textContent = dateLabel;
+  document.getElementById("calendar-day-legend").value = mark?.legend || "";
+  document.getElementById("calendar-color-options").innerHTML = CALENDAR_COLORS.map(color => `<label class="calendar-color-option"><input type="radio" name="calendar-color" value="${color.id}" ${color.id === selectedColor ? "checked" : ""}><span class="calendar-color-swatch color-${color.id}" aria-hidden="true"></span><span>${color.label}</span></label>`).join("");
+  document.getElementById("calendar-clear-day").hidden = !mark;
+  document.getElementById("modal-calendar-overlay").style.display = "flex";
+}
+function saveCalendarDay() {
+  if (!editingCalendarDate) return;
+  const selectedColor = document.querySelector('input[name="calendar-color"]:checked');
+  if (!selectedColor) return showToast("Escolha uma cor para o dia", true);
+  database.monthlyCalendars = database.monthlyCalendars || {};
+  database.monthlyCalendars[selectedCalendarMonth] = database.monthlyCalendars[selectedCalendarMonth] || {};
+  database.monthlyCalendars[selectedCalendarMonth][selectedCalendarProfessor] = database.monthlyCalendars[selectedCalendarMonth][selectedCalendarProfessor] || {};
+  database.monthlyCalendars[selectedCalendarMonth][selectedCalendarProfessor][editingCalendarDate] = { color: selectedColor.value, legend: document.getElementById("calendar-day-legend").value.trim() };
+  saveDatabase(); closeModal("modal-calendar"); render(); showToast("Dia salvo no calendário");
+}
+function clearCalendarDay() {
+  if (!editingCalendarDate) return;
+  const monthData = database.monthlyCalendars?.[selectedCalendarMonth];
+  if (monthData) {
+    if (monthData[selectedCalendarProfessor]) {
+      delete monthData[selectedCalendarProfessor][editingCalendarDate];
+      if (!Object.keys(monthData[selectedCalendarProfessor]).length) delete monthData[selectedCalendarProfessor];
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(editingCalendarDate)) delete monthData[editingCalendarDate];
+    if (!Object.keys(monthData).length) delete database.monthlyCalendars[selectedCalendarMonth];
+  }
+  saveDatabase(); closeModal("modal-calendar"); render(); showToast("Marcação removida");
 }
 
 function render() {
   renderSidebar();
   const total = classes().reduce((sum, turma) => sum + pointsTotal(turma), 0);
   document.getElementById("header-total").innerHTML = `<strong>${total}</strong> coins distribuídos ao todo`;
-  document.getElementById("content").innerHTML = selectedProfessorId ? professorHtml(selectedProfessorId) : selectedClassId === "overview" ? overviewHtml() : selectedClassId === "best-students" ? bestStudentsHtml() : selectedClassId === "history" ? historyHtml() : selectedClassId === "awards" ? awardsHtml() : selectedClassId === "attendance" ? attendanceHtml() : selectedClassId === "attendance-history" ? attendanceHistoryHtml() : selectedClassId === "schedule" ? scheduleHtml() : selectedClassId === "direction-absences" && activeProfile?.id === "direcao" ? directionAbsencesHtml() : classHtml(findClass(selectedClassId));
+  document.getElementById("content").innerHTML = selectedProfessorId ? professorHtml(selectedProfessorId) : selectedClassId === "overview" ? overviewHtml() : selectedClassId === "best-students" ? bestStudentsHtml() : selectedClassId === "history" ? historyHtml() : selectedClassId === "awards" ? awardsHtml() : selectedClassId === "attendance" ? attendanceHtml() : selectedClassId === "attendance-history" ? attendanceHistoryHtml() : selectedClassId === "schedule" ? scheduleHtml() : selectedClassId === "monthly-calendar" ? calendarHtml() : selectedClassId === "direction-absences" && activeProfile?.id === "direcao" ? directionAbsencesHtml() : classHtml(findClass(selectedClassId));
   applyTurmaThemes();
   bindContentEvents();
   if (selectedClassId === "overview" && !selectedProfessorId) addAmbientConfetti();
@@ -254,6 +454,7 @@ function renderSidebar() {
   document.querySelector(".nav-attendance").classList.toggle("active", selectedClassId === "attendance" && !selectedProfessorId);
   document.querySelector(".nav-attendance-history").classList.toggle("active", selectedClassId === "attendance-history" && !selectedProfessorId);
   document.querySelector(".nav-schedule").classList.toggle("active", selectedClassId === "schedule" && !selectedProfessorId);
+  document.querySelector(".nav-monthly-calendar").classList.toggle("active", selectedClassId === "monthly-calendar" && !selectedProfessorId);
   const directionAbsencesNav = document.querySelector(".nav-direction-absences");
   directionAbsencesNav.hidden = activeProfile?.id !== "direcao";
   directionAbsencesNav.classList.toggle("active", selectedClassId === "direction-absences" && !selectedProfessorId);
@@ -409,6 +610,9 @@ function bindContentEvents() {
   document.querySelectorAll("[data-attendance-class]").forEach(select => select.addEventListener("change", event => { attendanceClassId = event.target.value; render(); }));
   document.querySelectorAll("[data-attendance-date]").forEach(input => input.addEventListener("change", event => { attendanceDate = event.target.value; render(); }));
   document.querySelectorAll("[data-direction-date]").forEach(input => input.addEventListener("change", event => { if (event.target.value) { directionAbsenceDate = event.target.value; render(); } }));
+  document.querySelectorAll("[data-calendar-month]").forEach(input => input.addEventListener("change", event => { if (/^\d{4}-\d{2}$/.test(event.target.value)) { selectedCalendarMonth = event.target.value; render(); } }));
+  document.querySelectorAll("[data-calendar-professor]").forEach(select => select.addEventListener("change", event => { selectedCalendarProfessor = event.target.value; render(); }));
+  document.querySelectorAll("[data-calendar-day]").forEach(button => button.addEventListener("click", () => openCalendarDay(button.dataset.calendarDay)));
   document.querySelectorAll("[data-attendance-student]").forEach(input => input.addEventListener("change", event => saveAttendanceStatus(event.target.dataset.attendanceStudent, event.target.checked)));
   document.querySelectorAll("button[data-student]:not([data-action])").forEach(button => button.addEventListener("click", () => openDrawer(button.dataset.student)));
   document.querySelectorAll("[data-action]").forEach(button => button.addEventListener("click", () => {
@@ -435,6 +639,9 @@ function bindContentEvents() {
       else { const selectedDate = new Date(`${directionAbsenceDate}T12:00:00`); selectedDate.setDate(selectedDate.getDate() + (action === "direction-next" ? 1 : -1)); directionAbsenceDate = localDateString(selectedDate); }
       render();
     }
+    if (action === "calendar-previous") shiftCalendarMonth(-1);
+    if (action === "calendar-next") shiftCalendarMonth(1);
+    if (action === "calendar-print") window.print();
   }));
 }
 
@@ -599,7 +806,7 @@ async function loadFirestore() {
     const snapshot = await window.firestoreDb.collection("innova").doc("database").get();
     if (snapshot.exists && Array.isArray(snapshot.data().classes)) {
       const remoteData = snapshot.data();
-      database = applyMatheusPhoto(applyJheniPioneerArthurMove(applyJheniScheduleAdditions(applyLucasRoster(applyJheniRoster(normalizeDatabase(remoteData))))));
+      database = migrateDatabase(remoteData);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(database));
       if (JSON.stringify(remoteData) !== JSON.stringify(database)) await syncFirestore(database);
     }
@@ -618,12 +825,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.querySelector(".nav-attendance").addEventListener("click", () => { selectedClassId = "attendance"; selectedProfessorId = null; render(); });
   document.querySelector(".nav-attendance-history").addEventListener("click", () => { selectedClassId = "attendance-history"; selectedProfessorId = null; render(); });
   document.querySelector(".nav-schedule").addEventListener("click", () => { selectedClassId = "schedule"; selectedProfessorId = null; render(); });
+  document.querySelector(".nav-monthly-calendar").addEventListener("click", () => { selectedClassId = "monthly-calendar"; selectedProfessorId = null; render(); });
   document.querySelector(".nav-direction-absences").addEventListener("click", () => { if (activeProfile?.id === "direcao") { directionAbsenceDate = localDateString(); selectedClassId = "direction-absences"; selectedProfessorId = null; render(); } });
   document.getElementById("btn-salvar-turma").addEventListener("click", saveClass);
   document.getElementById("btn-salvar-aluno").addEventListener("click", saveStudent);
   document.getElementById("btn-salvar-saldo").addEventListener("click", saveBalance);
   document.getElementById("btn-salvar-professor").addEventListener("click", saveProfessor);
   document.getElementById("btn-salvar-award").addEventListener("click", saveAward);
+  document.getElementById("calendar-save-day").addEventListener("click", saveCalendarDay);
+  document.getElementById("calendar-clear-day").addEventListener("click", clearCalendarDay);
   document.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", () => closeModal(button.dataset.close)));
   document.getElementById("drawer-close").addEventListener("click", closeDrawer);
   document.getElementById("drawer-overlay").addEventListener("click", event => { if (event.target.id === "drawer-overlay") closeDrawer(); });
@@ -631,7 +841,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (window.firestoreDb) await loadFirestore();
   if (window.location.hash === "#historico") selectedClassId = "history";
   const savedProfile = sessionStorage.getItem("innovaCoinsActiveProfile");
-  if (savedProfile) { const savedProfileData = JSON.parse(savedProfile); activeProfile = profiles.find(profile => profile.id === savedProfileData.id) || savedProfileData; selectedActor = activeProfile.name; sessionStorage.setItem("innovaCoinsActiveProfile", JSON.stringify(activeProfile)); document.getElementById("pin-screen").classList.add("hidden"); }
+  if (savedProfile) { const savedProfileData = JSON.parse(savedProfile); activeProfile = profiles.find(profile => profile.id === savedProfileData.id) || savedProfileData; selectedActor = activeProfile.name; if (calendarProfessorNames().includes(activeProfile.name)) selectedCalendarProfessor = activeProfile.name; sessionStorage.setItem("innovaCoinsActiveProfile", JSON.stringify(activeProfile)); document.getElementById("pin-screen").classList.add("hidden"); }
   render();
   setInterval(() => {
     const today = localDateString();
