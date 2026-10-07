@@ -1,4 +1,5 @@
 const STORAGE_KEY = "innovaCoinsDatabase_v2";
+const MATHEUS_PHOTO = "WhatsApp Image 2026-10-02 at 16.59.48.jpeg";
 const COINS = [
   { label: "Cumprimento de prazos de entrega de atividades", points: 10 },
   { label: "Colaboração nas atividades em grupo", points: 10 },
@@ -29,7 +30,7 @@ const DEFAULT_PROFILES = [
   { id: "matheus", name: "Matheus", pin: "391658" },
   { id: "jheni", name: "Jheni", pin: "726904" },
   { id: "lucas", name: "Lucas", pin: "158437" },
-  { id: "direcao", name: "Direção", pin: "943812" }
+  { id: "direcao", name: "Direção/Secretaria", pin: "943812" }
 ];
 
 const DEFAULT_CLASSES = [
@@ -92,12 +93,14 @@ function loadDatabase() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved && Array.isArray(saved.classes)) {
-      const migrated = applyLucasRoster(applyJheniRoster(normalizeDatabase(saved)));
+      const migrated = applyMatheusPhoto(applyLucasRoster(applyJheniRoster(normalizeDatabase(saved))));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
       return migrated;
     }
   } catch (error) { console.warn("Banco local indisponível", error); }
-  const initial = applyLucasRoster(applyJheniRoster(normalizeDatabase({ classes: DEFAULT_CLASSES.map(item => ({ id: item.id, nome: item.nome, guerra: item.guerra, dia: item.dia, horario: item.horario, professores: item.professores, students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) })) })));
+  const initial = applyMatheusPhoto(applyLucasRoster(applyJheniRoster(normalizeDatabase({
+    classes: DEFAULT_CLASSES.map(item => ({ id: item.id, nome: item.nome, guerra: item.guerra, dia: item.dia, horario: item.horario, professores: item.professores, students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }))
+  }))));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
   return initial;
 }
@@ -118,6 +121,10 @@ function applyLucasRoster(data) {
   const newClasses = LUCAS_ROSTER.map(item => ({ id: uid("class"), nome: item.nome, guerra: "", dia: item.dia, horario: item.horario, professores: ["Lucas"], students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }));
   return { ...data, classes: [...data.classes, ...newClasses], migrations: { ...(data.migrations || {}), lucasRoster20261001a: true } };
 }
+function applyMatheusPhoto(data) {
+  if (data.migrations?.matheusPhoto20261006) return data;
+  return { ...data, professors: data.professors.map(professor => professor.name.toLowerCase() === "matheus" ? { ...professor, photo: MATHEUS_PHOTO } : professor), migrations: { ...(data.migrations || {}), matheusPhoto20261006: true } };
+}
 function saveDatabase() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(database));
   if (window.firestoreDb) syncFirestore(database);
@@ -137,7 +144,7 @@ async function loadProfiles() {
   if (!window.firestoreDb) return DEFAULT_PROFILES;
   try {
     const snapshot = await window.firestoreDb.collection("profiles").get();
-    if (!snapshot.empty) return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    if (!snapshot.empty) return snapshot.docs.map(doc => { const profile = { id: doc.id, ...doc.data() }; return profile.id === "direcao" ? { ...profile, name: "Direção/Secretaria" } : profile; });
     for (const profile of DEFAULT_PROFILES) await window.firestoreDb.collection("profiles").doc(profile.id).set(profile);
   } catch (error) { console.warn("Perfis locais em uso", error); }
   return DEFAULT_PROFILES;
@@ -214,13 +221,13 @@ function addAmbientConfetti() {
 }
 function awardsCarouselHtml() {
   const awards = database.awards || [];
-  if (!awards.length) return `<aside class="awards-carousel empty-awards"><div class="awards-carousel-head"><h2>🏅 Prêmios</h2><button class="btn btn-small btn-secondary" data-action="new-award">+ Foto</button></div><p>Adicione fotos dos prêmios que as turmas já conquistaram.</p></aside>`;
+  if (!awards.length) return `<aside class="awards-carousel empty-awards"><div class="awards-carousel-head"><h2>🏅 Prêmios</h2></div><p>Adicione fotos dos prêmios que as turmas já conquistaram.</p></aside>`;
   const current = awards[awardSlide % awards.length];
-  return `<aside class="awards-carousel"><div class="awards-carousel-head"><h2>🏅 Prêmios</h2><button class="btn btn-small btn-secondary" data-action="new-award">+ Foto</button></div><div class="award-slide"><img src="${current.image}" alt="${escapeHtml(current.caption || "Prêmio Innova Coins")}"><div class="award-caption">${escapeHtml(current.caption || "Prêmio Innova Coins")}</div></div><div class="award-controls"><button class="btn btn-ghost btn-small" data-action="award-prev">←</button><span>${awardSlide % awards.length + 1} / ${awards.length}</span><button class="btn btn-ghost btn-small" data-action="award-next">→</button></div></aside>`;
+  return `<aside class="awards-carousel"><div class="awards-carousel-head"><h2>🏅 Prêmios</h2></div><div class="award-slide"><img src="${current.image}" alt="${escapeHtml(current.caption || "Prêmio Innova Coins")}"><div class="award-caption">${escapeHtml(current.caption || "Prêmio Innova Coins")}</div></div><div class="award-controls"><button class="btn btn-ghost btn-small" data-action="award-prev">←</button><span>${awardSlide % awards.length + 1} / ${awards.length}</span><button class="btn btn-ghost btn-small" data-action="award-next">→</button></div></aside>`;
 }
 function awardsHtml() {
   const awards = database.awards || [];
-  return `<section class="awards-page"><div class="secao-head"><div><p class="page-kicker">Galeria</p><h1>🏅 Prêmios conquistados</h1><p>Fotos das conquistas que aparecem ao lado do pódio.</p></div><button class="btn btn-primary" data-action="new-award">+ Adicionar foto</button></div><div class="awards-manager-grid">${awards.map((award, index) => `<article class="award-manager-card"><img src="${award.image}" alt="${escapeHtml(award.caption || "Prêmio")}"><div><strong>${escapeHtml(award.caption || "Prêmio Innova Coins")}</strong><button class="btn btn-danger btn-small" data-action="delete-award" data-award="${index}">🗑️ Remover</button></div></article>`).join("") || `<p class="vazio">Nenhuma foto cadastrada.</p>`}</div></section>`;
+  return `<section class="awards-page"><div class="secao-head"><div><p class="page-kicker">Galeria</p><h1>🏅 Prêmios conquistados</h1><p>Fotos das conquistas que aparecem ao lado do pódio.</p></div></div><div class="awards-manager-grid">${awards.map((award, index) => `<article class="award-manager-card"><img src="${award.image}" alt="${escapeHtml(award.caption || "Prêmio")}"><div><strong>${escapeHtml(award.caption || "Prêmio Innova Coins")}</strong><button class="btn btn-danger btn-small" data-action="delete-award" data-award="${index}">🗑️ Remover</button></div></article>`).join("") || `<p class="vazio">Nenhuma foto cadastrada.</p>`}</div></section>`;
 }
 function attendanceHtml() {
   const professors = database.professors || [];
@@ -255,7 +262,7 @@ function directionAbsencesHtml() {
     return students(turma).filter(aluno => record?.present?.[aluno.id] === false).map(aluno => ({ aluno, turma }));
   });
   const launchedCalls = dailyClasses.filter(turma => database.attendance?.[turma.id]?.[directionAbsenceDate]?.launchedAt).length;
-  return `<section class="direction-absences-page"><div class="secao-head"><div><p class="page-kicker">Painel da direção</p><h1>Faltas do dia</h1><p class="direction-date-label">${escapeHtml(dayLabel)}</p></div><div class="direction-date-controls"><button class="btn btn-ghost" data-action="direction-prev" aria-label="Dia anterior">←</button><input type="date" aria-label="Selecionar dia" data-direction-date value="${escapeHtml(directionAbsenceDate)}"><button class="btn btn-ghost" data-action="direction-next" aria-label="Próximo dia">→</button><button class="btn btn-secondary" data-action="direction-today">Hoje</button></div></div><div class="direction-summary"><article><span>Faltas registradas</span><strong>${absences.length}</strong></article><article><span>Chamadas lançadas</span><strong>${launchedCalls} <small>de ${scheduledClasses.length}</small></strong></article><article><span>Turmas previstas</span><strong>${scheduledClasses.length}</strong></article></div><div class="direction-classes">${dailyClasses.map(turma => {
+  return `<section class="direction-absences-page"><div class="secao-head"><div><p class="page-kicker">Painel da Direção/Secretaria</p><h1>Faltas do dia</h1><p class="direction-date-label">${escapeHtml(dayLabel)}</p></div><div class="direction-date-controls"><button class="btn btn-ghost" data-action="direction-prev" aria-label="Dia anterior">←</button><input type="date" aria-label="Selecionar dia" data-direction-date value="${escapeHtml(directionAbsenceDate)}"><button class="btn btn-ghost" data-action="direction-next" aria-label="Próximo dia">→</button><button class="btn btn-secondary" data-action="direction-today">Hoje</button></div></div><div class="direction-summary"><article><span>Faltas registradas</span><strong>${absences.length}</strong></article><article><span>Chamadas lançadas</span><strong>${launchedCalls} <small>de ${scheduledClasses.length}</small></strong></article><article><span>Turmas previstas</span><strong>${scheduledClasses.length}</strong></article></div><div class="direction-classes">${dailyClasses.map(turma => {
     const record = database.attendance?.[turma.id]?.[directionAbsenceDate];
     const absentStudents = students(turma).filter(aluno => record?.present?.[aluno.id] === false);
     const status = record?.launchedAt ? "Chamada lançada" : record ? "Chamada em andamento" : "Chamada não registrada";
@@ -515,7 +522,7 @@ async function loadFirestore() {
   try {
     const snapshot = await window.firestoreDb.collection("innova").doc("database").get();
     if (snapshot.exists && Array.isArray(snapshot.data().classes)) {
-      database = applyLucasRoster(applyJheniRoster(normalizeDatabase(snapshot.data())));
+      database = applyMatheusPhoto(applyLucasRoster(applyJheniRoster(normalizeDatabase(snapshot.data()))));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(database));
     }
   } catch (error) { console.warn("Leitura do Firebase indisponível", error); }
@@ -545,7 +552,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (window.firestoreDb) await loadFirestore();
   if (window.location.hash === "#historico") selectedClassId = "history";
   const savedProfile = sessionStorage.getItem("innovaCoinsActiveProfile");
-  if (savedProfile) { activeProfile = JSON.parse(savedProfile); selectedActor = activeProfile.name; document.getElementById("pin-screen").classList.add("hidden"); }
+  if (savedProfile) { const savedProfileData = JSON.parse(savedProfile); activeProfile = profiles.find(profile => profile.id === savedProfileData.id) || savedProfileData; selectedActor = activeProfile.name; sessionStorage.setItem("innovaCoinsActiveProfile", JSON.stringify(activeProfile)); document.getElementById("pin-screen").classList.add("hidden"); }
   render();
   setInterval(() => {
     const today = localDateString();
