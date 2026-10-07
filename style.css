@@ -158,6 +158,25 @@ button{ font-family: inherit; }
 .attendance-history-meta{ display:grid; gap:3px; text-align:right; white-space:nowrap; }
 .attendance-history-meta strong{ color:var(--gold); }
 .attendance-history-meta span{ color:var(--ink-soft); font-size:.78rem; }
+.schedule-page{ max-width:1500px; margin:0 auto; }
+.schedule-table-wrap{ overflow:auto; border:1px solid var(--border); border-radius:var(--radius-sm); background:rgba(23,11,51,.8); }
+.schedule-table{ width:100%; min-width:820px; border-collapse:collapse; table-layout:fixed; }
+.schedule-table th,.schedule-table td{ padding:8px; border-right:1px solid rgba(255,255,255,.1); border-bottom:1px solid rgba(255,255,255,.1); }
+.schedule-table thead th{ position:sticky; top:0; z-index:2; background:var(--surface-alt); color:var(--gold-text); text-align:center; font-family:"Baloo 2",sans-serif; }
+.schedule-table thead th:first-child,.schedule-time{ width:78px; }
+.schedule-table thead th:first-child,.schedule-time{ background:var(--surface); color:var(--ink-soft); text-align:center; }
+.schedule-day-heading th{ padding:9px 12px; background:var(--surface-hover); color:var(--gold); text-align:left; font-family:"Baloo 2",sans-serif; }
+.schedule-table td{ height:72px; vertical-align:middle; }
+.schedule-time{ font-size:.78rem; white-space:nowrap; }
+.schedule-class{ display:grid; gap:4px; padding:8px; border:1px solid; border-radius:6px; color:var(--ink); }
+.schedule-class strong{ font-size:.76rem; line-height:1.2; }
+.schedule-class span{ color:var(--ink-soft); font-size:.68rem; }
+.schedule-planning{ display:block; padding:8px 4px; border:1px dashed rgba(185,140,255,.32); border-radius:6px; color:var(--ink-faint); font-size:.68rem; font-style:italic; text-align:center; }
+.schedule-class.turma-theme-curiosity{ background:linear-gradient(135deg,rgba(255,201,60,.42),rgba(118,79,12,.96)); border-color:rgba(255,218,112,.96); }
+.schedule-class.turma-theme-discovery{ background:linear-gradient(135deg,rgba(79,209,255,.42),rgba(19,78,119,.96)); border-color:rgba(132,226,255,.96); }
+.schedule-class.turma-theme-pioneer{ background:linear-gradient(135deg,rgba(51,225,176,.42),rgba(16,96,72,.96)); border-color:rgba(111,255,210,.96); }
+.schedule-class.turma-theme-challenger{ background:linear-gradient(135deg,rgba(185,140,255,.48),rgba(87,49,138,.96)); border-color:rgba(211,184,255,.95); }
+.schedule-class.turma-theme-other{ background:linear-gradient(135deg,rgba(185,140,255,.18),rgba(47,26,103,.88)); border-color:rgba(185,140,255,.58); }
 .direction-absences-page{ max-width:1000px; margin:0 auto; }
 .direction-date-label{ text-transform:capitalize; }
 .direction-date-controls{ display:flex; align-items:center; gap:8px; }

@@ -48,8 +48,7 @@ const JHENI_ADDITIONAL_ROSTER = [
   { nome: "Challenger Online", dia: "Quinta-feira", horario: "14h", alunos: ["Henrique Justi Poliseli Scopel", "Lucas Lira", "Nicholas Ury Castro Melo"] },
   { nome: "Challenger", dia: "Quinta-feira", horario: "16h", alunos: ["Francisco Wellyton da Silva", "Victor Vieira de Queiroga", "Lucas"] },
   { nome: "Discovery", dia: "Quinta-feira", horario: "14h", alunos: ["Ísis Figueiredo Rodrigues", "João Luís Azeredo Dias", "Josebe Moura Rocha", "Sara Ferreira Barros", "Santiago Nina Pedrouzo Perez"] },
-  { nome: "Pioneer Online", dia: "Quinta-feira", horario: "16h", alunos: ["Pedro Monteiro"] },
-  { nome: "Pioneer Online", dia: "Quinta-feira", horario: "15h", alunos: ["Arthur Baruc Santos"] }
+  { nome: "Pioneer Online", dia: "Quinta-feira", horario: "16h", alunos: ["Pedro Monteiro", "Arthur Baruc Santos"] }
 ];
 
 const JHENI_ROSTER = [
@@ -103,14 +102,14 @@ function loadDatabase() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved && Array.isArray(saved.classes)) {
-      const migrated = applyMatheusPhoto(applyJheniScheduleAdditions(applyLucasRoster(applyJheniRoster(normalizeDatabase(saved)))));
+      const migrated = applyMatheusPhoto(applyJheniPioneerArthurMove(applyJheniScheduleAdditions(applyLucasRoster(applyJheniRoster(normalizeDatabase(saved))))));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
       return migrated;
     }
   } catch (error) { console.warn("Banco local indisponível", error); }
-  const initial = applyMatheusPhoto(applyJheniScheduleAdditions(applyLucasRoster(applyJheniRoster(normalizeDatabase({
+  const initial = applyMatheusPhoto(applyJheniPioneerArthurMove(applyJheniScheduleAdditions(applyLucasRoster(applyJheniRoster(normalizeDatabase({
     classes: DEFAULT_CLASSES.map(item => ({ id: item.id, nome: item.nome, guerra: item.guerra, dia: item.dia, horario: item.horario, professores: item.professores, students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }))
-  })))));
+  }))))));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
   return initial;
 }
@@ -134,6 +133,26 @@ function applyJheniScheduleAdditions(data) {
     if (!alreadyExists) updatedClasses.push({ id: uid("class"), nome: item.nome, guerra: "", dia: item.dia, horario: item.horario, professores: ["Jheni"], students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) });
   });
   return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), jheniScheduleAdditions20261006b: true } };
+}
+function applyJheniPioneerArthurMove(data) {
+  if (data.migrations?.jheniPioneerArthurMove20261006a) return data;
+  const updatedClasses = data.classes.map(turma => ({ ...turma, students: [...students(turma)] }));
+  const sourceClass = updatedClasses.find(turma => turma.nome === "Pioneer Online" && turma.horario === "15h" && (turma.professores || []).includes("Jheni") && students(turma).some(aluno => aluno.name === "Arthur Baruc Santos"));
+  let destinationClass = updatedClasses.find(turma => turma.nome === "Pioneer Online" && turma.dia === "Quinta-feira" && turma.horario === "16h" && (turma.professores || []).includes("Jheni"));
+  if (!destinationClass) {
+    const roster = JHENI_ADDITIONAL_ROSTER.find(item => item.nome === "Pioneer Online" && item.dia === "Quinta-feira" && item.horario === "16h");
+    destinationClass = { id: uid("class"), nome: roster.nome, guerra: "", dia: roster.dia, horario: roster.horario, professores: ["Jheni"], students: roster.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) };
+    updatedClasses.push(destinationClass);
+  }
+  const movedStudent = sourceClass?.students.find(aluno => aluno.name === "Arthur Baruc Santos");
+  if (movedStudent) {
+    const existingStudentIndex = destinationClass.students.findIndex(aluno => aluno.name === movedStudent.name);
+    if (existingStudentIndex >= 0) destinationClass.students[existingStudentIndex] = movedStudent;
+    else destinationClass.students.push(movedStudent);
+    sourceClass.students = sourceClass.students.filter(aluno => aluno.id !== movedStudent.id);
+    if (!sourceClass.students.length) updatedClasses.splice(updatedClasses.indexOf(sourceClass), 1);
+  }
+  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), jheniPioneerArthurMove20261006a: true } };
 }
 function applyLucasRoster(data) {
   if (data.migrations?.lucasRoster20261001a) return data;
@@ -185,17 +204,44 @@ function changeProfile() { activeProfile = null; selectedActor = ""; sessionStor
 function applyTurmaThemes() {
   document.querySelectorAll(".turma-card, .podio-card").forEach(card => {
     const classLabel = card.classList.contains("podio-card") ? card.querySelectorAll("p")[1]?.textContent || "" : card.querySelector("p")?.textContent || "";
-    const normalizedName = classLabel.toLowerCase();
-    const category = ["curiosity", "discovery", "pioneer", "challenger"].find(item => normalizedName.includes(item)) || "other";
-    card.classList.add(`turma-theme-${category}`);
+    card.classList.add(`turma-theme-${turmaThemeByName(classLabel)}`);
   });
+}
+function turmaThemeByName(name = "") {
+  const normalizedName = String(name).toLowerCase();
+  return ["curiosity", "discovery", "pioneer", "challenger"].find(category => normalizedName.includes(category)) || "other";
+}
+function scheduleMinutes(value = "") {
+  const match = String(value).trim().match(/^(\d{1,2})(?::(\d{2}))?\s*h?$/i);
+  return match ? Number(match[1]) * 60 + Number(match[2] || 0) : null;
+}
+function scheduleTimeLabel(minutes) {
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  return minute ? `${hour}:${String(minute).padStart(2, "0")}` : `${hour}h`;
+}
+function scheduleCellHtml(day, minutes, professorName) {
+  const scheduledClasses = classes().filter(turma => turma.dia === day && scheduleMinutes(turma.horario) === minutes && (turma.professores || []).includes(professorName));
+  if (!scheduledClasses.length) return `<span class="schedule-planning">Planejamento pedagógico</span>`;
+  return scheduledClasses.map(turma => `<article class="schedule-class turma-theme-${turmaThemeByName(turma.nome)}"><strong>${escapeHtml(turma.nome)}</strong><span>${students(turma).length} alunos</span></article>`).join("");
+}
+function scheduleHtml() {
+  const weekdays = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira"];
+  const preferredProfessors = ["Jheni", "Matheus", "Lucas"];
+  const assignedProfessors = new Set(classes().flatMap(turma => turma.professores || []));
+  const extraProfessors = [...assignedProfessors].filter(name => !preferredProfessors.includes(name)).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const professorNames = [...preferredProfessors, ...extraProfessors];
+  const weekdayClasses = classes().filter(turma => weekdays.includes(turma.dia));
+  const timeSlots = [...new Set(weekdayClasses.map(turma => scheduleMinutes(turma.horario)).filter(minutes => minutes !== null))].sort((a, b) => a - b);
+  const displaySlots = timeSlots.length ? timeSlots : [9 * 60];
+  return `<section class="schedule-page"><div class="secao-head"><div><p class="page-kicker">Visão semanal</p><h1>Grade horária dos professores</h1><p>Segunda a sexta-feira · horários e turmas lado a lado</p></div></div><div class="schedule-table-wrap" role="region" aria-label="Grade horária semanal; role para os lados para ver toda a tabela" tabindex="0"><table class="schedule-table"><thead><tr><th scope="col">Horário</th>${professorNames.map(name => `<th scope="col">${escapeHtml(name)}</th>`).join("")}</tr></thead><tbody>${weekdays.map(day => `<tr class="schedule-day-heading"><th colspan="${professorNames.length + 1}" scope="rowgroup">${day}</th></tr>${displaySlots.map(minutes => `<tr><th class="schedule-time" scope="row">${scheduleTimeLabel(minutes)}</th>${professorNames.map(name => `<td>${scheduleCellHtml(day, minutes, name)}</td>`).join("")}</tr>`).join("")}`).join("")}</tbody></table></div></section>`;
 }
 
 function render() {
   renderSidebar();
   const total = classes().reduce((sum, turma) => sum + pointsTotal(turma), 0);
   document.getElementById("header-total").innerHTML = `<strong>${total}</strong> coins distribuídos ao todo`;
-  document.getElementById("content").innerHTML = selectedProfessorId ? professorHtml(selectedProfessorId) : selectedClassId === "overview" ? overviewHtml() : selectedClassId === "best-students" ? bestStudentsHtml() : selectedClassId === "history" ? historyHtml() : selectedClassId === "awards" ? awardsHtml() : selectedClassId === "attendance" ? attendanceHtml() : selectedClassId === "attendance-history" ? attendanceHistoryHtml() : selectedClassId === "direction-absences" && activeProfile?.id === "direcao" ? directionAbsencesHtml() : classHtml(findClass(selectedClassId));
+  document.getElementById("content").innerHTML = selectedProfessorId ? professorHtml(selectedProfessorId) : selectedClassId === "overview" ? overviewHtml() : selectedClassId === "best-students" ? bestStudentsHtml() : selectedClassId === "history" ? historyHtml() : selectedClassId === "awards" ? awardsHtml() : selectedClassId === "attendance" ? attendanceHtml() : selectedClassId === "attendance-history" ? attendanceHistoryHtml() : selectedClassId === "schedule" ? scheduleHtml() : selectedClassId === "direction-absences" && activeProfile?.id === "direcao" ? directionAbsencesHtml() : classHtml(findClass(selectedClassId));
   applyTurmaThemes();
   bindContentEvents();
   if (selectedClassId === "overview" && !selectedProfessorId) addAmbientConfetti();
@@ -207,6 +253,7 @@ function renderSidebar() {
   document.querySelector(".nav-awards").classList.toggle("active", selectedClassId === "awards" && !selectedProfessorId);
   document.querySelector(".nav-attendance").classList.toggle("active", selectedClassId === "attendance" && !selectedProfessorId);
   document.querySelector(".nav-attendance-history").classList.toggle("active", selectedClassId === "attendance-history" && !selectedProfessorId);
+  document.querySelector(".nav-schedule").classList.toggle("active", selectedClassId === "schedule" && !selectedProfessorId);
   const directionAbsencesNav = document.querySelector(".nav-direction-absences");
   directionAbsencesNav.hidden = activeProfile?.id !== "direcao";
   directionAbsencesNav.classList.toggle("active", selectedClassId === "direction-absences" && !selectedProfessorId);
@@ -552,7 +599,7 @@ async function loadFirestore() {
     const snapshot = await window.firestoreDb.collection("innova").doc("database").get();
     if (snapshot.exists && Array.isArray(snapshot.data().classes)) {
       const remoteData = snapshot.data();
-      database = applyMatheusPhoto(applyJheniScheduleAdditions(applyLucasRoster(applyJheniRoster(normalizeDatabase(remoteData)))));
+      database = applyMatheusPhoto(applyJheniPioneerArthurMove(applyJheniScheduleAdditions(applyLucasRoster(applyJheniRoster(normalizeDatabase(remoteData))))));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(database));
       if (JSON.stringify(remoteData) !== JSON.stringify(database)) await syncFirestore(database);
     }
@@ -570,6 +617,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.querySelector(".nav-overview").addEventListener("click", () => { selectedClassId = "overview"; selectedProfessorId = null; render(); });
   document.querySelector(".nav-attendance").addEventListener("click", () => { selectedClassId = "attendance"; selectedProfessorId = null; render(); });
   document.querySelector(".nav-attendance-history").addEventListener("click", () => { selectedClassId = "attendance-history"; selectedProfessorId = null; render(); });
+  document.querySelector(".nav-schedule").addEventListener("click", () => { selectedClassId = "schedule"; selectedProfessorId = null; render(); });
   document.querySelector(".nav-direction-absences").addEventListener("click", () => { if (activeProfile?.id === "direcao") { directionAbsenceDate = localDateString(); selectedClassId = "direction-absences"; selectedProfessorId = null; render(); } });
   document.getElementById("btn-salvar-turma").addEventListener("click", saveClass);
   document.getElementById("btn-salvar-aluno").addEventListener("click", saveStudent);
