@@ -74,6 +74,8 @@ let selectedProfessorDay = "all";
 let attendanceClassId = "";
 let attendanceProfessorId = "all";
 let attendanceDate = new Date().toISOString().slice(0, 10);
+let directionAbsenceDate = localDateString();
+let lastObservedLocalDate = directionAbsenceDate;
 let awardSlide = 0;
 let activeStudentId = null;
 let editingClassId = null;
@@ -85,6 +87,7 @@ let profiles = DEFAULT_PROFILES;
 let activeProfile = null;
 
 function uid(prefix) { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`; }
+function localDateString(date = new Date()) { const offset = date.getTimezoneOffset(); return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10); }
 function loadDatabase() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -157,7 +160,7 @@ function render() {
   renderSidebar();
   const total = classes().reduce((sum, turma) => sum + pointsTotal(turma), 0);
   document.getElementById("header-total").innerHTML = `<strong>${total}</strong> coins distribuídos ao todo`;
-  document.getElementById("content").innerHTML = selectedProfessorId ? professorHtml(selectedProfessorId) : selectedClassId === "overview" ? overviewHtml() : selectedClassId === "best-students" ? bestStudentsHtml() : selectedClassId === "history" ? historyHtml() : selectedClassId === "awards" ? awardsHtml() : selectedClassId === "attendance" ? attendanceHtml() : selectedClassId === "attendance-history" ? attendanceHistoryHtml() : classHtml(findClass(selectedClassId));
+  document.getElementById("content").innerHTML = selectedProfessorId ? professorHtml(selectedProfessorId) : selectedClassId === "overview" ? overviewHtml() : selectedClassId === "best-students" ? bestStudentsHtml() : selectedClassId === "history" ? historyHtml() : selectedClassId === "awards" ? awardsHtml() : selectedClassId === "attendance" ? attendanceHtml() : selectedClassId === "attendance-history" ? attendanceHistoryHtml() : selectedClassId === "direction-absences" && activeProfile?.id === "direcao" ? directionAbsencesHtml() : classHtml(findClass(selectedClassId));
   bindContentEvents();
   if (selectedClassId === "overview" && !selectedProfessorId) addAmbientConfetti();
   if (selectedClassId === "requests") loadRequests();
@@ -168,6 +171,9 @@ function renderSidebar() {
   document.querySelector(".nav-awards").classList.toggle("active", selectedClassId === "awards" && !selectedProfessorId);
   document.querySelector(".nav-attendance").classList.toggle("active", selectedClassId === "attendance" && !selectedProfessorId);
   document.querySelector(".nav-attendance-history").classList.toggle("active", selectedClassId === "attendance-history" && !selectedProfessorId);
+  const directionAbsencesNav = document.querySelector(".nav-direction-absences");
+  directionAbsencesNav.hidden = activeProfile?.id !== "direcao";
+  directionAbsencesNav.classList.toggle("active", selectedClassId === "direction-absences" && !selectedProfessorId);
   document.getElementById("admin-tools").hidden = activeProfile?.id !== "admin";
   const professorTarget = document.getElementById("sidebar-professores");
   professorTarget.innerHTML = (database.professors || []).map(professor => `<button class="nav-item ${professor.id === selectedProfessorId ? "active" : ""}" data-professor="${professor.id}"><span class="nav-item-label">${professorAvatarHtml(professor)} ${escapeHtml(professor.name)}</span><span class="nav-item-meta">${classes().filter(turma => (turma.professores || []).includes(professor.name)).length} turmas</span></button>`).join("") || `<p class="sidebar-vazio">Nenhum professor</p>`;
@@ -237,6 +243,25 @@ function attendanceHistoryHtml() {
   const records = classes().flatMap(turma => Object.entries(database.attendance?.[turma.id] || {}).map(([date, record]) => ({ turma, date, record }))).filter(item => !selectedProfessor || (item.turma.professores || []).includes(selectedProfessor.name)).sort((a, b) => b.date.localeCompare(a.date));
   return `<section class="attendance-page"><div class="secao-head"><div><p class="page-kicker">Consulta pública</p><h1>🗓️ Registros de chamadas</h1><p>Todos os perfis podem consultar as presenças e faltas já registradas.</p></div><button class="btn btn-primary" data-action="attendance">+ Nova chamada</button></div><div class="professor-filter"><label for="attendance-history-professor">Filtrar por professor</label><select id="attendance-history-professor" data-attendance-professor><option value="all">Todos os professores</option>${professors.map(professor => `<option value="${professor.id}" ${professor.id === attendanceProfessorId ? "selected" : ""}>${escapeHtml(professor.name)}</option>`).join("")}</select></div><div class="attendance-history-list">${records.map(({ turma, date, record }) => { const present = students(turma).filter(aluno => record.present?.[aluno.id] !== false).length; const absent = students(turma).length - present; return `<article class="attendance-history-card"><div><strong>${escapeHtml(turma.guerra || turma.nome)}</strong><p>${escapeHtml(turma.nome)} · ${escapeHtml(turma.dia || "")} · ${(turma.professores || []).map(escapeHtml).join(", ") || "Sem professor"}</p></div><div class="attendance-history-meta"><strong>${new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR")}</strong><span>${present} presentes · ${absent} faltas</span></div></article>`; }).join("") || `<p class="vazio">Nenhum registro de chamada encontrado.</p>`}</div></section>`;
 }
+function directionAbsencesHtml() {
+  const date = new Date(`${directionAbsenceDate}T12:00:00`);
+  const weekday = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"][date.getDay()];
+  const dayLabel = date.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const scheduledClasses = classes().filter(turma => turma.dia === weekday);
+  const classesWithRecords = classes().filter(turma => database.attendance?.[turma.id]?.[directionAbsenceDate]);
+  const dailyClasses = [...new Map([...scheduledClasses, ...classesWithRecords].map(turma => [turma.id, turma])).values()].sort((a, b) => (a.horario || "").localeCompare(b.horario || "") || a.nome.localeCompare(b.nome));
+  const absences = dailyClasses.flatMap(turma => {
+    const record = database.attendance?.[turma.id]?.[directionAbsenceDate];
+    return students(turma).filter(aluno => record?.present?.[aluno.id] === false).map(aluno => ({ aluno, turma }));
+  });
+  const launchedCalls = dailyClasses.filter(turma => database.attendance?.[turma.id]?.[directionAbsenceDate]?.launchedAt).length;
+  return `<section class="direction-absences-page"><div class="secao-head"><div><p class="page-kicker">Painel da direção</p><h1>Faltas do dia</h1><p class="direction-date-label">${escapeHtml(dayLabel)}</p></div><div class="direction-date-controls"><button class="btn btn-ghost" data-action="direction-prev" aria-label="Dia anterior">←</button><input type="date" aria-label="Selecionar dia" data-direction-date value="${escapeHtml(directionAbsenceDate)}"><button class="btn btn-ghost" data-action="direction-next" aria-label="Próximo dia">→</button><button class="btn btn-secondary" data-action="direction-today">Hoje</button></div></div><div class="direction-summary"><article><span>Faltas registradas</span><strong>${absences.length}</strong></article><article><span>Chamadas lançadas</span><strong>${launchedCalls} <small>de ${scheduledClasses.length}</small></strong></article><article><span>Turmas previstas</span><strong>${scheduledClasses.length}</strong></article></div><div class="direction-classes">${dailyClasses.map(turma => {
+    const record = database.attendance?.[turma.id]?.[directionAbsenceDate];
+    const absentStudents = students(turma).filter(aluno => record?.present?.[aluno.id] === false);
+    const status = record?.launchedAt ? "Chamada lançada" : record ? "Chamada em andamento" : "Chamada não registrada";
+    return `<article class="direction-class-row ${record?.launchedAt ? "is-launched" : record ? "is-pending" : "is-missing"}"><div class="direction-class-head"><div><h2>${escapeHtml(turma.nome)}</h2><p>${escapeHtml(turma.horario || "Horário não definido")} · ${(turma.professores || []).map(escapeHtml).join(", ") || "Sem professor"}</p></div><span class="direction-call-status">${escapeHtml(status)}</span></div>${absentStudents.length ? `<div class="direction-absent-list">${absentStudents.map(aluno => `<div><span class="direction-absent-mark" aria-hidden="true">!</span><strong>${escapeHtml(aluno.name)}</strong><small>Falta</small></div>`).join("")}</div>` : `<p class="direction-no-absences">${record ? "Nenhuma falta registrada nesta turma." : "Aguardando o registro da chamada."}</p>`}</article>`;
+  }).join("") || `<div class="direction-empty"><strong>Nenhuma turma prevista para este dia.</strong><span>Escolha outra data no calendário para consultar os registros.</span></div>`}</div></section>`;
+}
 function saveAttendanceStatus(studentId, present) {
   const turma = findClass(attendanceClassId); if (!turma) return;
   database.attendance = database.attendance || {};
@@ -300,6 +325,7 @@ function bindContentEvents() {
   document.querySelectorAll("[data-attendance-professor]").forEach(select => select.addEventListener("change", event => { attendanceProfessorId = event.target.value; attendanceClassId = ""; render(); }));
   document.querySelectorAll("[data-attendance-class]").forEach(select => select.addEventListener("change", event => { attendanceClassId = event.target.value; render(); }));
   document.querySelectorAll("[data-attendance-date]").forEach(input => input.addEventListener("change", event => { attendanceDate = event.target.value; render(); }));
+  document.querySelectorAll("[data-direction-date]").forEach(input => input.addEventListener("change", event => { if (event.target.value) { directionAbsenceDate = event.target.value; render(); } }));
   document.querySelectorAll("[data-attendance-student]").forEach(input => input.addEventListener("change", event => saveAttendanceStatus(event.target.dataset.attendanceStudent, event.target.checked)));
   document.querySelectorAll("button[data-student]:not([data-action])").forEach(button => button.addEventListener("click", () => openDrawer(button.dataset.student)));
   document.querySelectorAll("[data-action]").forEach(button => button.addEventListener("click", () => {
@@ -321,6 +347,11 @@ function bindContentEvents() {
     if (action === "attendance") { selectedClassId = "attendance"; selectedProfessorId = null; render(); }
     if (action === "launch-attendance") launchAttendance();
     if (action === "attendance-history") { selectedClassId = "attendance-history"; selectedProfessorId = null; render(); }
+    if (action === "direction-prev" || action === "direction-next" || action === "direction-today") {
+      if (action === "direction-today") directionAbsenceDate = localDateString();
+      else { const selectedDate = new Date(`${directionAbsenceDate}T12:00:00`); selectedDate.setDate(selectedDate.getDate() + (action === "direction-next" ? 1 : -1)); directionAbsenceDate = localDateString(selectedDate); }
+      render();
+    }
   }));
 }
 
@@ -501,6 +532,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.querySelector(".nav-overview").addEventListener("click", () => { selectedClassId = "overview"; selectedProfessorId = null; render(); });
   document.querySelector(".nav-attendance").addEventListener("click", () => { selectedClassId = "attendance"; selectedProfessorId = null; render(); });
   document.querySelector(".nav-attendance-history").addEventListener("click", () => { selectedClassId = "attendance-history"; selectedProfessorId = null; render(); });
+  document.querySelector(".nav-direction-absences").addEventListener("click", () => { if (activeProfile?.id === "direcao") { directionAbsenceDate = localDateString(); selectedClassId = "direction-absences"; selectedProfessorId = null; render(); } });
   document.getElementById("btn-salvar-turma").addEventListener("click", saveClass);
   document.getElementById("btn-salvar-aluno").addEventListener("click", saveStudent);
   document.getElementById("btn-salvar-saldo").addEventListener("click", saveBalance);
@@ -516,6 +548,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (savedProfile) { activeProfile = JSON.parse(savedProfile); selectedActor = activeProfile.name; document.getElementById("pin-screen").classList.add("hidden"); }
   render();
   setInterval(() => {
+    const today = localDateString();
+    if (today !== lastObservedLocalDate) {
+      const wasShowingToday = directionAbsenceDate === lastObservedLocalDate;
+      lastObservedLocalDate = today;
+      if (wasShowingToday) {
+        directionAbsenceDate = today;
+        if (selectedClassId === "direction-absences") render();
+      }
+    }
     if (selectedClassId === "overview" && (database.awards || []).length > 1) {
       awardSlide = (awardSlide + 1) % database.awards.length;
       const carousel = document.querySelector(".awards-carousel");
