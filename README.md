@@ -1,162 +1,34 @@
-# Innova Coins - Sistema de Gamificação por Turma
+# Innova Coins
 
-## 🚀 Setup Firebase para Vercel
+Painel para gerenciar turmas, professores, alunos, coins, histórico, chamada, calendário e pódio por nome de guerra.
 
-### 1. Criar Projeto Firebase
-1. Acesse [Firebase Console](https://console.firebase.google.com)
-2. Clique em "Criar Projeto"
-3. Nomeie como "innova-coins"
-4. Prossiga com as configurações padrão
+## Dados compartilhados pelo GitHub
 
-### 2. Obter Credenciais
-1. No Firebase Console, vá para **Configurações do Projeto**
-2. Na aba **Seu aplicativo**, clique em **Web** (</>)
-3. Copie o objeto de configuração
-4. Cole em `config.js`
+O painel guarda os dados no arquivo `data/database.json` deste repositório. A função `api/database.js`, publicada pela Vercel, lê e atualiza o arquivo pela API do GitHub. Não é necessário configurar Firebase nem outro banco de dados.
 
-### 3. Habilitar Firestore
-1. No Firebase, vá para **Firestore Database**
-2. Clique em **Criar banco de dados**
-3. Inicie em modo **Teste** (depois configure segurança)
-4. Escolha a localização mais próxima
+Para configurar:
 
-### 4. Regras de Segurança do Firestore
-Cole isto em **Regras do Firestore**:
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Permitir leitura/escrita em produção com autenticação
-    match /turmas/{turmaId} {
-      allow read, write: if true; // Mude para autenticação em produção
-    }
-    match /alunos/{document=**} {
-      allow read, write: if true;
-    }
-  }
-}
-```
+1. Importe este repositório como um projeto na Vercel e publique na branch `main`. A Vercel reconhece automaticamente a função em `api/database.js`.
+2. Crie no GitHub um token fine-grained limitado ao repositório `InnovaCoins`, com a permissão **Contents: Read and write**.
+3. No projeto da Vercel, abra **Settings → Environment Variables** e adicione `GITHUB_TOKEN` com o token. **Não adicione o token ao código ou ao repositório.**
+4. `GITHUB_REPOSITORY` usa `JheniferFM/InnovaCoins` por padrão e `GITHUB_BRANCH` usa `main`. Configure essas variáveis somente se estiver usando outro repositório ou branch.
+5. Faça um novo deploy depois de configurar as variáveis.
 
-### 5. Publicar no Vercel
-```bash
-npm init -y
-npm install
-git push  # Push para GitHub
-```
+Na primeira entrada com perfil e PIN válidos, os dados locais daquele computador são copiados para o arquivo compartilhado, caso ele ainda esteja vazio. Depois que o JSON já tiver dados, ele se torna a fonte compartilhada para os demais computadores. As alterações são verificadas periodicamente; cada gravação cria um commit no GitHub e pode iniciar outro deploy da Vercel.
 
-No Vercel:
-1. Conecte seu repositório GitHub
-2. Deploy automático!
+Se dois computadores tentarem gravar usando uma versão desatualizada, o painel avisa e atualiza os dados locais para evitar sobrescrever silenciosamente a versão mais recente. Refaça a alteração avisada após a atualização. O arquivo tem limite de 900 KB, incluindo fotos de prêmios.
 
-## 📊 Estrutura do Banco de Dados
+Leituras do JSON são públicas. Para gravar, a API exige um perfil e PIN válidos e usa o token do GitHub apenas no servidor da Vercel. O PIN é uma proteção simples do painel, não substitui autenticação forte para dados confidenciais.
 
-### Coleção: `turmas`
-```javascript
-{
-  id: "turma-uuid",
-  nome: "Discovery 14h",
-  nomeDeGuerra: "Dragons", // Nome escolhido pela turma
-  dia: "Terça-feira",
-  horario: "14h",
-  professores: ["Matheus", "João"],
-  totalCoins: 1250,
-  criadoEm: timestamp,
-  atualizadoEm: timestamp
-}
-```
+## Uso local
 
-### Coleção: `alunos`
-```javascript
-{
-  id: "aluno-uuid",
-  turmaId: "turma-uuid",
-  nome: "João Silva",
-  coins: 150,
-  historico: [
-    { tipo: "bonus", valor: 10, motivo: "Ajudou colega", data: timestamp },
-    { tipo: "penalidade", valor: -5, motivo: "Falta", data: timestamp }
-  ],
-  criadoEm: timestamp,
-  atualizadoEm: timestamp
-}
-```
+Abra `index.html` para experimentar a interface. Sem a função publicada pela Vercel, as alterações ficam somente no armazenamento local daquele navegador e não são compartilhadas.
 
-## 🎮 Funcionalidades
+## Recursos
 
-✅ Criar turmas com nome de guerra  
-✅ Editar informações da turma  
-✅ Deletar turmas  
-✅ Adicionar/remover alunos  
-✅ Registrar pontos (coins) por aluno  
-✅ Pódio por turma  
-✅ Histórico de transações  
-✅ Persistência offline com Firebase  
-
-## 🛠️ Desenvolvimento Local
-
-```bash
-# Instalar extensão Firebase para VS Code
-# Ou servir localmente
-npx http-server
-```
-
-## 📱 Responsividade
-Otimizado para desktop e tablet. Funciona perfeitamente no Vercel!
- # Innova Coins
- 
- Painel para gerenciar várias turmas, professores, alunos, coins, histórico e pódio por nome de guerra.
- 
- ## Uso local
- 
- Abra `index.html` ou sirva a pasta com qualquer servidor estático. Sem credenciais do Firebase, os dados ficam salvos no `localStorage` deste navegador, o que permite testar toda a interface.
- 
- ## Banco compartilhado para a Vercel
- 
- Para que vários professores vejam os mesmos dados:
- 
- 1. Crie um projeto no [Firebase Console](https://console.firebase.google.com).
- 2. Ative o Firestore Database.
- 3. Cadastre um aplicativo Web e copie as credenciais para `config.js`.
-4. Ative o Storage para armazenar as fotos dos prêmios.
-5. Configure as regras do Firestore e Storage para o modo sem login.
-6. Publique esta pasta na Vercel como projeto estático.
- 
- Com as credenciais corretas em `config.js`, os dados compartilhados são mantidos no documento `innova/database` do Firestore e atualizados em tempo real nos computadores conectados. A lista de perfis também é acompanhada em tempo real. Sem Firestore, o painel funciona apenas com os dados locais daquele navegador; alterações locais não são compartilhadas com outros computadores.
-
-O painel usa entrada por PIN, sem e-mail ou senha. Os perfis disponíveis são Administrador, Matheus, Jheni, Lucas e Direção. O PIN é solicitado apenas ao entrar ou trocar de perfil; depois disso, o responsável é registrado automaticamente em cada lançamento junto com data, hora, motivo e alteração.
-
-Exemplo mínimo para o painel sem login (use App Check ou um backend se precisar proteger contra escrita externa):
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /innova/database {
-      allow read, write: if true;
-    }
-  }
-}
-```
-
-Para o Storage, durante o desenvolvimento:
-
-```javascript
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /awards/{fileName} {
-      allow read, write: if true;
-    }
-  }
-}
-```
- 
- ## Recursos
- 
- - Criar, editar e apagar turmas.
- - Vários professores na mesma turma.
- - Nome oficial e nome de guerra exibido no pódio.
- - Criar, editar e apagar alunos.
- - Registrar coins positivos e negativos com data, motivo e histórico.
- - Ranking de alunos e pódio geral de turmas.
- - Persistência local para uso sem conexão e sincronização em tempo real entre computadores pelo Firestore.
+- Criar, editar e apagar turmas, alunos e professores.
+- Nome oficial e nome de guerra exibido no pódio.
+- Registrar coins positivos e negativos com data, motivo e histórico.
+- Ranking de alunos e pódio geral de turmas.
+- Chamada, calendário, prêmios e histórico.
+- Armazenamento local offline e sincronização compartilhada pelo arquivo JSON no GitHub.
