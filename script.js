@@ -94,7 +94,7 @@ let attendanceDate = new Date().toISOString().slice(0, 10);
 let directionAbsenceDate = localDateString();
 let lastObservedLocalDate = directionAbsenceDate;
 let selectedCalendarMonth = localDateString().slice(0, 7);
-let selectedCalendarProfessor = "";
+let selectedCalendarOwner = "";
 let editingCalendarDate = null;
 let awardSlide = 0;
 let activeStudentId = null;
@@ -373,7 +373,7 @@ function enterWithPin() {
   if (!profile || pin !== profile.pin) { document.getElementById("pin-message").textContent = "Perfil ou PIN incorreto."; return; }
   activeProfile = profile;
   selectedActor = profile.name;
-  if (calendarProfessorNames().includes(profile.name)) selectedCalendarProfessor = profile.name;
+  selectedCalendarOwner = profile.id === "direcao" ? "staff:direcao" : calendarProfessorNames().includes(profile.name) ? profile.name : "";
   sessionStorage.setItem("innovaCoinsActiveProfile", JSON.stringify(profile));
   if (!sharedDatabaseInitialized) queueSharedSync();
   document.getElementById("pin-message").textContent = "";
@@ -445,21 +445,36 @@ function calendarProfessorNames() {
   const additional = [...availableProfessors].filter(name => !preferredOrder.includes(name)).sort((first, second) => first.localeCompare(second, "pt-BR"));
   return [...preferred, ...additional];
 }
-function calendarMarksForProfessor(monthKey, professorName) {
+function calendarMarksForOwner(monthKey, ownerId) {
   const monthData = database.monthlyCalendars?.[monthKey] || {};
-  const legacyMarks = Object.fromEntries(Object.entries(monthData).filter(([key, mark]) => /^\d{4}-\d{2}-\d{2}$/.test(key) && mark && typeof mark === "object"));
-  return { ...legacyMarks, ...(monthData[professorName] || {}) };
+  const legacyMarks = ownerId.startsWith("staff:") ? {} : Object.fromEntries(Object.entries(monthData).filter(([key, mark]) => /^\d{4}-\d{2}-\d{2}$/.test(key) && mark && typeof mark === "object"));
+  return { ...legacyMarks, ...(monthData[ownerId] || {}) };
+}
+function calendarOwners() {
+  const professors = calendarProfessorNames().map(name => ({ id: name, label: name }));
+  if (activeProfile?.id !== "direcao") return professors;
+  return [
+    { id: "staff:secretaria", label: "Secretaria" },
+    { id: "staff:direcao", label: "Direção" },
+    ...professors
+  ];
 }
 function calendarHtml() {
   const [year, month] = selectedCalendarMonth.split("-").map(Number);
-  const professorNames = calendarProfessorNames();
-  if (!professorNames.includes(selectedCalendarProfessor)) selectedCalendarProfessor = professorNames.includes(activeProfile?.name) ? activeProfile.name : professorNames[0] || "Jheni";
+  const owners = calendarOwners();
+  if (!owners.some(owner => owner.id === selectedCalendarOwner)) {
+    selectedCalendarOwner = owners.some(owner => owner.id === (activeProfile?.id === "direcao" ? "staff:direcao" : activeProfile?.name))
+      ? activeProfile.id === "direcao" ? "staff:direcao" : activeProfile.name
+      : owners[0]?.id || "Jheni";
+  }
+  const selectedOwner = owners.find(owner => owner.id === selectedCalendarOwner);
+  const ownerLabel = selectedOwner?.label || selectedCalendarOwner;
   const monthIndex = month - 1;
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDayOffset = (new Date(year, monthIndex, 1).getDay() + 6) % 7;
   const cellCount = Math.ceil((firstDayOffset + daysInMonth) / 7) * 7;
   const today = localDateString();
-  const monthMarks = calendarMarksForProfessor(selectedCalendarMonth, selectedCalendarProfessor);
+  const monthMarks = calendarMarksForOwner(selectedCalendarMonth, selectedCalendarOwner);
   const weekdayLabels = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
   const calendarCells = Array.from({ length: cellCount }, (_, index) => {
     const day = index - firstDayOffset + 1;
@@ -483,7 +498,7 @@ function calendarHtml() {
   const nextMonthDate = new Date(Number(yearValue), Number(monthValue), 1);
   const previousMonth = `${previousMonthDate.getFullYear()}-${String(previousMonthDate.getMonth() + 1).padStart(2, "0")}`;
   const nextMonth = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, "0")}`;
-  return `<section class="calendar-page"><div class="secao-head calendar-screen-head"><div><p class="page-kicker">Organização financeira</p><h1>Calendário mensal</h1><p>Calendário compartilhado dos professores</p></div><div class="calendar-toolbar"><label class="calendar-teacher-picker"><span>Professor</span><select data-calendar-professor aria-label="Calendário do professor">${professorNames.map(name => `<option value="${escapeHtml(name)}" ${name === selectedCalendarProfessor ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><button class="btn btn-ghost" type="button" data-action="calendar-previous" aria-label="Mês anterior">←</button><input type="month" data-calendar-month value="${selectedCalendarMonth}" aria-label="Selecionar mês"><button class="btn btn-ghost" type="button" data-action="calendar-next" aria-label="Próximo mês">→</button><button class="btn btn-primary" type="button" data-action="calendar-print">Exportar PDF</button></div></div><div class="calendar-layout"><section class="calendar-sheet" aria-label="Calendário de ${escapeHtml(selectedCalendarProfessor)} em ${escapeHtml(calendarMonthLabel(selectedCalendarMonth))}"><header class="calendar-print-heading"><span>INNOVA COINS · FINANCEIRO · ${escapeHtml(selectedCalendarProfessor.toUpperCase())}</span><h2>${escapeHtml(calendarMonthLabel(selectedCalendarMonth))}</h2></header><div class="calendar-weekdays">${weekdayLabels.map(label => `<span>${label}</span>`).join("")}</div><div class="monthly-calendar-grid">${calendarCells}</div></section><aside class="calendar-legend"><div class="calendar-legend-heading"><span>${escapeHtml(selectedCalendarProfessor.toUpperCase())}</span><h2>Legendas do mês</h2></div><ul>${legendList || `<li class="calendar-empty-legend">Nenhuma data marcada neste mês.</li>`}</ul></aside></div></section>`;
+  return `<section class="calendar-page"><div class="secao-head calendar-screen-head"><div><p class="page-kicker">Organização financeira</p><h1>Calendário mensal</h1><p>Calendário de ${escapeHtml(ownerLabel)}</p></div><div class="calendar-toolbar"><label class="calendar-teacher-picker"><span>Responsável</span><select data-calendar-owner aria-label="Calendário do responsável">${owners.map(owner => `<option value="${escapeHtml(owner.id)}" ${owner.id === selectedCalendarOwner ? "selected" : ""}>${escapeHtml(owner.label)}</option>`).join("")}</select></label><button class="btn btn-ghost" type="button" data-action="calendar-previous" aria-label="Mês anterior">←</button><input type="month" data-calendar-month value="${selectedCalendarMonth}" aria-label="Selecionar mês"><button class="btn btn-ghost" type="button" data-action="calendar-next" aria-label="Próximo mês">→</button><button class="btn btn-primary" type="button" data-action="calendar-print">Exportar PDF</button></div></div><div class="calendar-layout"><section class="calendar-sheet" aria-label="Calendário de ${escapeHtml(ownerLabel)} em ${escapeHtml(calendarMonthLabel(selectedCalendarMonth))}"><header class="calendar-print-heading"><span>INNOVA COINS · FINANCEIRO · ${escapeHtml(ownerLabel.toUpperCase())}</span><h2>${escapeHtml(calendarMonthLabel(selectedCalendarMonth))}</h2></header><div class="calendar-weekdays">${weekdayLabels.map(label => `<span>${label}</span>`).join("")}</div><div class="monthly-calendar-grid">${calendarCells}</div></section><aside class="calendar-legend"><div class="calendar-legend-heading"><span>${escapeHtml(ownerLabel.toUpperCase())}</span><h2>Legendas do mês</h2></div><ul>${legendList || `<li class="calendar-empty-legend">Nenhuma data marcada neste mês.</li>`}</ul></aside></div></section>`;
 }
 function shiftCalendarMonth(offset) {
   const [year, month] = selectedCalendarMonth.split("-").map(Number);
@@ -495,7 +510,7 @@ function openCalendarDay(date) {
   editingCalendarDate = date;
   const [year, month, day] = date.split("-").map(Number);
   const dateLabel = new Date(year, month - 1, day).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
-  const mark = calendarMarksForProfessor(selectedCalendarMonth, selectedCalendarProfessor)[date];
+  const mark = calendarMarksForOwner(selectedCalendarMonth, selectedCalendarOwner)[date];
   const selectedColor = calendarColor(mark?.color).id;
   document.getElementById("calendar-day-title").textContent = dateLabel;
   document.getElementById("calendar-day-legend").value = mark?.legend || "";
@@ -509,19 +524,19 @@ function saveCalendarDay() {
   if (!selectedColor) return showToast("Escolha uma cor para o dia", true);
   database.monthlyCalendars = database.monthlyCalendars || {};
   database.monthlyCalendars[selectedCalendarMonth] = database.monthlyCalendars[selectedCalendarMonth] || {};
-  database.monthlyCalendars[selectedCalendarMonth][selectedCalendarProfessor] = database.monthlyCalendars[selectedCalendarMonth][selectedCalendarProfessor] || {};
-  database.monthlyCalendars[selectedCalendarMonth][selectedCalendarProfessor][editingCalendarDate] = { color: selectedColor.value, legend: document.getElementById("calendar-day-legend").value.trim() };
+  database.monthlyCalendars[selectedCalendarMonth][selectedCalendarOwner] = database.monthlyCalendars[selectedCalendarMonth][selectedCalendarOwner] || {};
+  database.monthlyCalendars[selectedCalendarMonth][selectedCalendarOwner][editingCalendarDate] = { color: selectedColor.value, legend: document.getElementById("calendar-day-legend").value.trim() };
   saveDatabase(); closeModal("modal-calendar"); render(); showToast("Dia salvo no calendário");
 }
 function clearCalendarDay() {
   if (!editingCalendarDate) return;
   const monthData = database.monthlyCalendars?.[selectedCalendarMonth];
   if (monthData) {
-    if (monthData[selectedCalendarProfessor]) {
-      delete monthData[selectedCalendarProfessor][editingCalendarDate];
-      if (!Object.keys(monthData[selectedCalendarProfessor]).length) delete monthData[selectedCalendarProfessor];
+    if (monthData[selectedCalendarOwner]) {
+      delete monthData[selectedCalendarOwner][editingCalendarDate];
+      if (!Object.keys(monthData[selectedCalendarOwner]).length) delete monthData[selectedCalendarOwner];
     }
-    if (/^\d{4}-\d{2}-\d{2}$/.test(editingCalendarDate)) delete monthData[editingCalendarDate];
+    if (!selectedCalendarOwner.startsWith("staff:") && /^\d{4}-\d{2}-\d{2}$/.test(editingCalendarDate)) delete monthData[editingCalendarDate];
     if (!Object.keys(monthData).length) delete database.monthlyCalendars[selectedCalendarMonth];
   }
   saveDatabase(); closeModal("modal-calendar"); render(); showToast("Marcação removida");
@@ -701,7 +716,7 @@ function bindContentEvents() {
   document.querySelectorAll("[data-attendance-date]").forEach(input => input.addEventListener("change", event => { attendanceDate = event.target.value; render(); }));
   document.querySelectorAll("[data-direction-date]").forEach(input => input.addEventListener("change", event => { if (event.target.value) { directionAbsenceDate = event.target.value; render(); } }));
   document.querySelectorAll("[data-calendar-month]").forEach(input => input.addEventListener("change", event => { if (/^\d{4}-\d{2}$/.test(event.target.value)) { selectedCalendarMonth = event.target.value; render(); } }));
-  document.querySelectorAll("[data-calendar-professor]").forEach(select => select.addEventListener("change", event => { selectedCalendarProfessor = event.target.value; render(); }));
+  document.querySelectorAll("[data-calendar-owner]").forEach(select => select.addEventListener("change", event => { selectedCalendarOwner = event.target.value; render(); }));
   document.querySelectorAll("[data-calendar-day]").forEach(button => button.addEventListener("click", () => openCalendarDay(button.dataset.calendarDay)));
   document.querySelectorAll("[data-attendance-student]").forEach(input => input.addEventListener("change", event => saveAttendanceStatus(event.target.dataset.attendanceStudent, event.target.checked)));
   document.querySelectorAll("button[data-student]:not([data-action])").forEach(button => button.addEventListener("click", () => openDrawer(button.dataset.student)));
@@ -929,7 +944,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.addEventListener("click", event => { const chip = event.target.closest("[data-points]"); if (chip) registerPoints(chip.dataset.points, chip.dataset.label); });
   if (window.location.hash === "#historico") selectedClassId = "history";
   const savedProfile = sessionStorage.getItem("innovaCoinsActiveProfile");
-  if (savedProfile) { const savedProfileData = JSON.parse(savedProfile); activeProfile = profiles.find(profile => profile.id === savedProfileData.id) || savedProfileData; selectedActor = activeProfile.name; if (calendarProfessorNames().includes(activeProfile.name)) selectedCalendarProfessor = activeProfile.name; sessionStorage.setItem("innovaCoinsActiveProfile", JSON.stringify(activeProfile)); document.getElementById("pin-screen").classList.add("hidden"); }
+  if (savedProfile) { const savedProfileData = JSON.parse(savedProfile); activeProfile = profiles.find(profile => profile.id === savedProfileData.id) || savedProfileData; selectedActor = activeProfile.name; selectedCalendarOwner = activeProfile.id === "direcao" ? "staff:direcao" : calendarProfessorNames().includes(activeProfile.name) ? activeProfile.name : ""; sessionStorage.setItem("innovaCoinsActiveProfile", JSON.stringify(activeProfile)); document.getElementById("pin-screen").classList.add("hidden"); }
   render();
   appHasRendered = true;
   if (activeProfile && !sharedDatabaseInitialized) queueSharedSync();

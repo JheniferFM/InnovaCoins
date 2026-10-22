@@ -28,5 +28,5 @@ Abra `index.html` para experimentar a interface. Para compartilhar e sincronizar
 - Nome oficial e nome de guerra exibido no pódio.
 - Registrar coins positivos e negativos com data, motivo e histórico.
 - Ranking de alunos e pódio geral de turmas.
-- Chamada, calendário, prêmios e histórico.
+- Chamada, calendários mensais independentes para Secretaria e Direção, calendários dos professores, exportação para PDF, prêmios e histórico.
 - Armazenamento local offline e sincronização compartilhada pelo Supabase.
