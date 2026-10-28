@@ -8,7 +8,7 @@ if (!window.supabase?.createClient) {
 window.innovaSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: false,
-    autoRefreshToken: false,
+    autoRefreshToken: true,
     detectSessionInUrl: false
   }
 });

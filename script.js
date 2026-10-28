@@ -1,5 +1,5 @@
-const STORAGE_KEY = "innovaCoinsDatabase_v2";
 const MATHEUS_PHOTO = "WhatsApp Image 2026-10-02 at 16.59.48.jpeg";
+const LEGACY_STORAGE_KEY = "innovaCoinsDatabase_v2";
 const COINS = [
   { label: "Cumprimento de prazos de entrega de atividades", points: 10 },
   { label: "Colaboração nas atividades em grupo", points: 10 },
@@ -33,58 +33,14 @@ const CALENDAR_COLORS = [
   { id: "pink", label: "Rosa" }
 ];
 const DEFAULT_PROFILES = [
-  { id: "admin", name: "Administrador", pin: "804272" },
-  { id: "matheus", name: "Matheus", pin: "391658" },
-  { id: "jheni", name: "Jheni", pin: "726904" },
-  { id: "lucas", name: "Lucas", pin: "158437" },
-  { id: "direcao", name: "Direção/Secretaria", pin: "943812" }
+  { id: "admin", name: "Administrador" },
+  { id: "matheus", name: "Matheus" },
+  { id: "jheni", name: "Jheni" },
+  { id: "lucas", name: "Lucas" },
+  { id: "direcao", name: "Direção/Secretaria" }
 ];
 
-const DEFAULT_CLASSES = [
-  { id: "terca-discovery-14h", nome: "Discovery 14h", guerra: "", dia: "Terça-feira", horario: "14h", professores: ["Matheus"], alunos: ["Bernardo Sousa Martins", "Bianca da Silva Farias", "Carlos Roberto do Nascimento", "Danilo Levi Carvalho Alves e Silva", "Davi Gomes Passos", "Guilherme de Lima Lyra", "Heitor de Siqueira Mattioli", "Luis Augusto Moura Silva", "Nicolas Barros de França", "Sophia Moura da Silva"] },
-  { id: "quarta-curiosity4-14h", nome: "Curiosity 4", guerra: "", dia: "Quarta-feira", horario: "14h", professores: ["Matheus"], alunos: ["Aurora Naves Felix", "Davi Augusto Rocha de Holanda", "Hugo Naves Felix", "Calebe Sales Luz"] },
-  { id: "sexta-discovery2-9h", nome: "Discovery 2", guerra: "", dia: "Sexta-feira", horario: "9h", professores: ["Jhenifer", "Matheus"], alunos: ["Arthur Tozetti", "Davi Rodrigues de Souza", "Gabriel Souza Salgado", "George Gabriel da Cunha", "Josué Abreu Pereira", "Kalel Pinheiro Lemes de Oliveira", "Luciano Macêdo de Carvalho", "Mariana Nunes dos Santo", "Miguel Monteiro Barbosa de Souza", "Rafael Durães de Faria", "Samuel Araújo dos Passos", "Túlio dos Santos Nobre"] },
-  { id: "sexta-discovery4-14h", nome: "Discovery 4", guerra: "", dia: "Sexta-feira", horario: "14h", professores: ["Matheus", "Jhenifer"], alunos: ["Cecília Azevedo Silva de Carvalho", "Luigi Viana de Almeida", "Letícia Ozeias Medeiros", "Ryan Martins Braz"] },
-  { id: "sabado-curiosity4-08h", nome: "Curiosity 4", guerra: "", dia: "Sábado", horario: "8h", professores: ["Matheus"], alunos: ["Bento Moreira Prates Menezes", "Bento Guidugli Debuz Vieira", "Caique Curvello Marinho", "Calebe Sales Luz", "Eliza Barros Rodrigues", "Gabriel Garcia dos Santos", "Maria Clara Pereira Ferreira Benvindo", "Miguel Leão Gomes", "Miguel Alves Costa", "Sofia Albuquerque Aerre"] },
-  { id: "sabado-discovery2-10h", nome: "Discovery 2", guerra: "", dia: "Sábado", horario: "10h", professores: ["Matheus"], alunos: ["Heitor Reis Lima", "Heitor Souza de Jesus", "João Pedro Santana", "João Vieira dos Santos Neto", "Jonas Souza de Jesus", "Miguel Nascimento", "Pedro Lucas Monteiro de Sousa", "Pedro Tavares Silva Barroso"] },
-  { id: "sabado-discovery-13h", nome: "Discovery", guerra: "", dia: "Sábado", horario: "13h", professores: ["Matheus"], alunos: ["Gabriel Merten Pereira", "Theo Richard Almeida Jordão"] }
-];
-
-const JHENI_ADDITIONAL_ROSTER = [
-  { nome: "Pioneer Online", dia: "Terça-feira", horario: "14h", alunos: ["Arthur", "Nicolas Frederico Blind"] },
-  { nome: "Pioneer Online", dia: "Quarta-feira", horario: "9h", alunos: ["Artur Sanção Ribeiro", "Davi Ferreira Andrade Ricardo", "Rafael Dias de Menezes", "Luna"] },
-  { nome: "Challenger Online", dia: "Quinta-feira", horario: "14h", alunos: ["Henrique Justi Poliseli Scopel", "Lucas Lira", "Nicholas Ury Castro Melo"] },
-  { nome: "Pioneer Online", dia: "Quinta-feira", horario: "16h", alunos: ["Pedro Monteiro", "Arthur Baruc Santos"] }
-];
-
-const JHENI_ROSTER = [
-  { nome: "Challenger", dia: "Terça-feira", horario: "16h", alunos: ["Francisco Wellyton da Silva", "Victor Vieira de Queiroga", "Lucas"] },
-  { nome: "Discovery", dia: "Quarta-feira", horario: "14h", alunos: ["Ísis Figueiredo Rodrigues", "João Luís Azeredo Dias", "Josebe Moura Rocha", "Sara Ferreira Barros", "Santiago Nina Pedrouzo Perez"] },
-  { nome: "Discovery", dia: "Quarta-feira", horario: "16h", alunos: ["Henrique Rodrigues de Souza", "Miguel Morais Alexandre", "Miguel Gonçalves Bizinoto", "Pedro Avelar Ribeiro"] },
-  { nome: "Discovery I", dia: "Sexta-feira", horario: "9h", alunos: ["George Gabriel da Cunha", "João", "Kalel Pinheiro Lemes de Oliveira", "Luciano Macêdo de Carvalho", "Miguel Monteiro Barbosa de Souza", "Samuel Araújo dos Passos", "Túlio dos Santos Nobre"] },
-  { nome: "Pioneer", dia: "Sexta-feira", horario: "14h", alunos: ["Sofia da Silva Reis", "Mateus Silva Coelho Vargas"] },
-  { nome: "Discovery", dia: "Sábado", horario: "8h", alunos: ["Isaac Cassiano de Oliveira", "Katarina Lucena Bahia", "Miguel Henrique de Oliveira Arruda"] },
-  { nome: "Pioneer", dia: "Sábado", horario: "10h", alunos: ["Bryan Victor De Caldeira Lima", "Cecília", "Julia Santos Oliveira"] },
-  { nome: "Curiosity", dia: "Sábado", horario: "13h", alunos: ["Athos Raphael Barreto De Oliveira", "Kaleo Luíz Camurça Fragoso e Barros", "Rebeca Rocha Rosário"] },
-  { nome: "Pioneer", dia: "Sábado", horario: "15h", alunos: ["Arthur Baruc Santos"] },
-  ...JHENI_ADDITIONAL_ROSTER
-];
-
-const LUCAS_ROSTER = [
-  { nome: "Pioneer 2 L5", dia: "Quinta-feira", horario: "09h", alunos: ["Heitor Pereira da Silva", "Santhiago Reis Mota dos Santos"] },
-  { nome: "Pioneer 4 L2", dia: "Quarta-feira", horario: "14h", alunos: ["Ana Carolina de Oliveira Sena", "Arthur Aguiar Cruz", "Artur Rocha de Oliveira", "Eduardo Pedrouzo Perez Neto", "Enzo Eduardo Cardoso de Oliveira", "Gabriel Moraes dos Santos", "Henrique de Souza Leite", "Marya Alice Nogueira Santiago", "Ryan Pereira de Castro"] },
-  { nome: "Pioneer 4 L2", dia: "Sexta-feira", horario: "09h", alunos: ["Benjamin Moro Redeschi Buss", "Kauan Gabriel Macedo Silva", "Laila Figueiredo Rodrigues Parreira", "Santhiago Reis Mota dos Santos"] },
-  { nome: "Pioneer 4 L5", dia: "Sexta-feira", horario: "14h", alunos: ["Anna Júlia Bolzani Soares", "Arthur Melo Carvalho", "Benjamin Moro Redeschi Buss", "Davi Félix Ferreira Xavier", "Davi Miguel de Castro Crispim", "Gabriel Asafe da Silva Neves", "Lucas Ozeias Medeiros", "Pedro Euclides Simões Noronha", "Pedro Mendes de Souza"] },
-  { nome: "Challenger", dia: "Quinta-feira", horario: "14h", alunos: ["Henrique Eduardo", "Lara Pessoa Martins de Almeida", "Lucas dos Anjos", "Maria Luiza"] },
-  { nome: "Challenger 2 L2", dia: "Sábado", horario: "10h", alunos: ["Ana Carolina Santos Oliveira", "Anna Luiza de Aguiar", "Antônio Hamilton Zancan Mourão", "Heitor Lima Oliveira", "Luís Felipe Figueiredo Olivé", "Mateus Caeiro Lima", "Pietro Gonçalves Gomes", "Rafael Caeiro Lima"] },
-  { nome: "Challenger 3 L2", dia: "Sexta-feira", horario: "16h", alunos: ["João Benicio Alves Matias", "Samuel Ribeiro Siqueira"] },
-  { nome: "Challenger 4 L5", dia: "Quinta-feira", horario: "16h", alunos: ["Guilherme Ambrozino Alves C. Carneiro", "João Henrique Morais Gonçalves", "Lucas Emanuel Marinho de Oliveira", "Luiz Eduardo Godefroy Castro", "Rafaella Martins de Souza"] },
-  { nome: "Challenger 4 L2", dia: "Sábado", horario: "15h", alunos: ["Ayla Monteiro Barbosa de Souza", "Emanuel Barreto de Souza", "Miguel Camelo Ferreira", "Miguel Oliveira de Lima", "Samara Cristine Golçalves de Lima"] }
-];
-
-const LUCAS_PIONEER3L5_ROSTER = { nome: "Pioneer 3 L5", dia: "Sábado", horario: "13h", alunos: ["Davi José Moura da Silva", "Enzo de Campos Oliveira", "Gabryela Da Silva Ferraz", "Guilherme Marinho Cabral", "Miguel Davi de Almeida Varela", "Sandoval de Queiroz Miguel"] };
-
-let database = loadDatabase();
+let database = { classes: [], professors: [], awards: [], attendance: {}, monthlyCalendars: {} };
 let selectedClassId = "overview";
 let selectedProfessorId = null;
 let selectedProfessorDay = "all";
@@ -105,7 +61,9 @@ let editingProfessorPhotoOnly = false;
 let selectedActor = "";
 let profiles = DEFAULT_PROFILES;
 let activeProfile = null;
+let currentAuthUser = null;
 let sharedRevision = null;
+let sharedReadError = null;
 let sharedDatabaseInitialized = false;
 let sharedReadInFlight = false;
 let sharedSyncRunning = false;
@@ -115,154 +73,27 @@ let supabaseRealtimeChannel = null;
 
 function uid(prefix) { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`; }
 function localDateString(date = new Date()) { const offset = date.getTimezoneOffset(); return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10); }
-function loadDatabase() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (saved && Array.isArray(saved.classes)) {
-      const migrated = migrateDatabase(saved);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-      return migrated;
-    }
-  } catch (error) { console.warn("Banco local indisponível", error); }
-  const initial = migrateDatabase({
-    classes: DEFAULT_CLASSES.map(item => ({ id: item.id, nome: item.nome, guerra: item.guerra, dia: item.dia, horario: item.horario, professores: item.professores, students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }))
-  });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-  return initial;
-}
 function normalizeDatabase(data) {
   const classesData = (data.classes || []).map(turma => ({ ...turma, professores: (turma.professores || []).map(name => name === "Jhenifer" ? "Jheni" : name), students: (turma.students || turma.alunos || []).map(aluno => typeof aluno === "string" ? { id: uid("student"), name: aluno, points: 0, history: [] } : aluno) }));
   const names = [...(data.professors || []).map(professor => professor.name), ...classesData.flatMap(turma => turma.professores || []), "Matheus", "Jheni", "Lucas"];
   const uniqueNames = [...new Set(names.filter(Boolean))];
   return { ...data, classes: classesData, awards: Array.isArray(data.awards) ? data.awards : [], attendance: data.attendance || {}, monthlyCalendars: data.monthlyCalendars || {}, professors: uniqueNames.map(name => { const professor = (data.professors || []).find(item => item.name === name) || { id: uid("professor"), name }; return name === "Jheni" && !professor.photo ? { ...professor, photo: "unnamed (1).jpg" } : professor; }) };
 }
-function applyJheniRoster(data) {
-  if (data.migrations?.jheniRoster20260924c) return data;
-  const existingClasses = data.classes.map(turma => ({ ...turma, professores: (turma.professores || []).filter(name => name !== "Jheni") })).filter(turma => turma.professores.length > 0);
-  const newClasses = JHENI_ROSTER.map(item => ({ id: uid("class"), nome: item.nome, guerra: "", dia: item.dia, horario: item.horario, professores: ["Jheni"], students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }));
-  return { ...data, classes: [...existingClasses, ...newClasses], migrations: { ...(data.migrations || {}), jheniRoster20260924c: true } };
-}
-function applyJheniScheduleAdditions(data) {
-  if (data.migrations?.jheniScheduleAdditions20261006b) return data;
-  const updatedClasses = [...data.classes];
-  JHENI_ADDITIONAL_ROSTER.forEach(item => {
-    const alreadyExists = updatedClasses.some(turma => turma.nome === item.nome && turma.dia === item.dia && turma.horario === item.horario && (turma.professores || []).includes("Jheni"));
-    if (!alreadyExists) updatedClasses.push({ id: uid("class"), nome: item.nome, guerra: "", dia: item.dia, horario: item.horario, professores: ["Jheni"], students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) });
-  });
-  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), jheniScheduleAdditions20261006b: true } };
-}
-function applyJheniPioneerArthurMove(data) {
-  if (data.migrations?.jheniPioneerArthurMove20261006a) return data;
-  const updatedClasses = data.classes.map(turma => ({ ...turma, students: [...students(turma)] }));
-  const sourceClass = updatedClasses.find(turma => turma.nome === "Pioneer Online" && turma.horario === "15h" && (turma.professores || []).includes("Jheni") && students(turma).some(aluno => aluno.name === "Arthur Baruc Santos"));
-  let destinationClass = updatedClasses.find(turma => turma.nome === "Pioneer Online" && turma.dia === "Quinta-feira" && turma.horario === "16h" && (turma.professores || []).includes("Jheni"));
-  if (!destinationClass) {
-    const roster = JHENI_ADDITIONAL_ROSTER.find(item => item.nome === "Pioneer Online" && item.dia === "Quinta-feira" && item.horario === "16h");
-    destinationClass = { id: uid("class"), nome: roster.nome, guerra: "", dia: roster.dia, horario: roster.horario, professores: ["Jheni"], students: roster.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) };
-    updatedClasses.push(destinationClass);
+function migrateDatabase(data) { return normalizeDatabase(data); }
+function saveDatabase() { queueSharedSync(); }
+function clearLegacyDatabaseCache() {
+  try {
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  } catch (error) {
+    console.warn("Não foi possível remover o cache local antigo", error);
   }
-  const movedStudent = sourceClass?.students.find(aluno => aluno.name === "Arthur Baruc Santos");
-  if (movedStudent) {
-    const existingStudentIndex = destinationClass.students.findIndex(aluno => aluno.name === movedStudent.name);
-    if (existingStudentIndex >= 0) destinationClass.students[existingStudentIndex] = movedStudent;
-    else destinationClass.students.push(movedStudent);
-    sourceClass.students = sourceClass.students.filter(aluno => aluno.id !== movedStudent.id);
-    if (!sourceClass.students.length) updatedClasses.splice(updatedClasses.indexOf(sourceClass), 1);
+}
+function clearLegacyProfileSession() {
+  try {
+    sessionStorage.removeItem("innovaCoinsActiveProfile");
+  } catch (error) {
+    console.warn("Não foi possível remover a sessão de perfil antiga", error);
   }
-  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), jheniPioneerArthurMove20261006a: true } };
-}
-function applyJheniRemoveThursdayClasses(data) {
-  if (data.migrations?.jheniRemoveThursdayClasses20261006a) return data;
-  const updatedClasses = data.classes.flatMap(turma => {
-    const isJheniClass = (turma.professores || []).includes("Jheni");
-    const isRemovedClass = (turma.nome === "Challenger" && turma.dia === "Quinta-feira" && turma.horario === "16h") || (turma.nome === "Discovery" && turma.dia === "Quinta-feira" && turma.horario === "14h");
-    if (!isJheniClass || !isRemovedClass) return [turma];
-    const remainingProfessors = turma.professores.filter(name => name !== "Jheni");
-    return remainingProfessors.length ? [{ ...turma, professores: remainingProfessors }] : [];
-  });
-  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), jheniRemoveThursdayClasses20261006a: true } };
-}
-function applyJheniTuesdayPioneerOnline(data) {
-  if (data.migrations?.jheniTuesdayPioneerOnline20261006a) return data;
-  const roster = JHENI_ADDITIONAL_ROSTER.find(item => item.nome === "Pioneer Online" && item.dia === "Terça-feira" && item.horario === "14h");
-  const updatedClasses = [...data.classes];
-  const existingClassIndex = updatedClasses.findIndex(turma => turma.nome === roster.nome && turma.dia === roster.dia && turma.horario === roster.horario && (turma.professores || []).includes("Jheni"));
-  if (existingClassIndex >= 0) {
-    const existingClass = updatedClasses[existingClassIndex];
-    const existingStudentNames = new Set(students(existingClass).map(aluno => aluno.name));
-    const missingStudents = roster.alunos.filter(name => !existingStudentNames.has(name)).map(name => ({ id: uid("student"), name, points: 0, history: [] }));
-    if (missingStudents.length) updatedClasses[existingClassIndex] = { ...existingClass, students: [...students(existingClass), ...missingStudents] };
-  } else {
-    updatedClasses.push({ id: uid("class"), nome: roster.nome, guerra: "", dia: roster.dia, horario: roster.horario, professores: ["Jheni"], students: roster.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) });
-  }
-  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), jheniTuesdayPioneerOnline20261006a: true } };
-}
-function applyLucasRoster(data) {
-  if (data.migrations?.lucasRoster20261001a) return data;
-  const newClasses = LUCAS_ROSTER.map(item => ({ id: uid("class"), nome: item.nome, guerra: "", dia: item.dia, horario: item.horario, professores: ["Lucas"], students: item.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }));
-  return { ...data, classes: [...data.classes, ...newClasses], migrations: { ...(data.migrations || {}), lucasRoster20261001a: true } };
-}
-function applyMatheusChallenger4L2(data) {
-  if (data.migrations?.matheusChallenger4L2_20261006a) return data;
-  const roster = LUCAS_ROSTER.find(item => item.nome === "Challenger 4 L2" && item.dia === "Sábado" && item.horario === "15h");
-  const existingClass = data.classes.find(turma => turma.nome === roster.nome && turma.dia === roster.dia && turma.horario === roster.horario);
-  const updatedClasses = existingClass
-    ? data.classes.map(turma => turma.id === existingClass.id ? { ...turma, professores: [...new Set([...(turma.professores || []), "Lucas", "Matheus"])] } : turma)
-    : [...data.classes, { id: uid("class"), nome: roster.nome, guerra: "", dia: roster.dia, horario: roster.horario, professores: ["Lucas", "Matheus"], students: roster.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }];
-  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), matheusChallenger4L2_20261006a: true } };
-}
-function applyLucasPioneer3L5Time(data) {
-  if (data.migrations?.lucasPioneer3L5Time20261006a) return data;
-  const existingClass = data.classes.find(turma => turma.nome === "Pioneer 3 L5" && turma.dia === "Sábado" && (turma.professores || []).includes("Lucas"));
-  const updatedClasses = existingClass
-    ? data.classes.map(turma => turma.id === existingClass.id ? { ...turma, horario: "15h" } : turma)
-    : data.classes;
-  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), lucasPioneer3L5Time20261006a: true } };
-}
-function applyJheniPioneerSaturday15(data) {
-  if (data.migrations?.jheniPioneerSaturday15_20261006a) return data;
-  const roster = JHENI_ROSTER.find(item => item.nome === "Pioneer" && item.dia === "Sábado" && item.alunos.includes("Arthur Baruc Santos"));
-  const existingClass = data.classes.find(turma => turma.nome === roster.nome && turma.dia === roster.dia && (turma.professores || []).includes("Jheni") && students(turma).some(aluno => aluno.name === "Arthur Baruc Santos"))
-    || data.classes.find(turma => turma.nome === roster.nome && turma.dia === roster.dia && turma.horario === "13h" && (turma.professores || []).includes("Jheni"));
-  let updatedClasses;
-  if (existingClass) {
-    const existingStudentNames = new Set(students(existingClass).map(aluno => aluno.name));
-    const missingStudents = roster.alunos.filter(name => !existingStudentNames.has(name)).map(name => ({ id: uid("student"), name, points: 0, history: [] }));
-    updatedClasses = data.classes.map(turma => turma.id === existingClass.id ? { ...turma, horario: "15h", students: [...students(turma), ...missingStudents] } : turma);
-  } else {
-    updatedClasses = [...data.classes, { id: uid("class"), nome: roster.nome, guerra: "", dia: roster.dia, horario: "15h", professores: ["Jheni"], students: roster.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }];
-  }
-  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), jheniPioneerSaturday15_20261006a: true } };
-}
-function applyLucasPioneer3L5At13(data) {
-  if (data.migrations?.lucasPioneer3L5At13_20261006a) return data;
-  const existingClass = data.classes.find(turma => turma.nome === LUCAS_PIONEER3L5_ROSTER.nome && turma.dia === LUCAS_PIONEER3L5_ROSTER.dia);
-  const updatedClasses = existingClass
-    ? data.classes.map(turma => turma.id === existingClass.id ? { ...turma, horario: "13h", professores: ["Lucas"] } : turma)
-    : [...data.classes, { id: uid("class"), nome: LUCAS_PIONEER3L5_ROSTER.nome, guerra: "", dia: LUCAS_PIONEER3L5_ROSTER.dia, horario: "13h", professores: ["Lucas"], students: LUCAS_PIONEER3L5_ROSTER.alunos.map(name => ({ id: uid("student"), name, points: 0, history: [] })) }];
-  return { ...data, classes: updatedClasses, migrations: { ...(data.migrations || {}), lucasPioneer3L5At13_20261006a: true } };
-}
-function applyMatheusPhoto(data) {
-  if (data.migrations?.matheusPhoto20261006) return data;
-  return { ...data, professors: data.professors.map(professor => professor.name.toLowerCase() === "matheus" ? { ...professor, photo: MATHEUS_PHOTO } : professor), migrations: { ...(data.migrations || {}), matheusPhoto20261006: true } };
-}
-function migrateDatabase(data) {
-  let migrated = normalizeDatabase(data);
-  migrated = applyJheniRoster(migrated);
-  migrated = applyLucasRoster(migrated);
-  migrated = applyMatheusChallenger4L2(migrated);
-  migrated = applyJheniScheduleAdditions(migrated);
-  migrated = applyJheniPioneerArthurMove(migrated);
-  migrated = applyJheniRemoveThursdayClasses(migrated);
-  migrated = applyJheniTuesdayPioneerOnline(migrated);
-  migrated = applyLucasPioneer3L5Time(migrated);
-  migrated = applyJheniPioneerSaturday15(migrated);
-  migrated = applyLucasPioneer3L5At13(migrated);
-  return applyMatheusPhoto(migrated);
-}
-function saveDatabase() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(database));
-  queueSharedSync();
 }
 function classes() { return database.classes; }
 function students(turma) { return turma?.students || []; }
@@ -276,12 +107,15 @@ function professorAvatarHtml(professor, size = "small") { return professor.photo
 function findClass(id) { return classes().find(turma => turma.id === id); }
 function findStudent(id) { for (const turma of classes()) { const aluno = students(turma).find(item => item.id === id); if (aluno) return { aluno, turma }; } return null; }
 function updateProfileOptions() {
-  document.getElementById("profile-select").innerHTML = profiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.name)}</option>`).join("");
+  document.getElementById("profile-select").innerHTML = DEFAULT_PROFILES
+    .map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.name)}</option>`)
+    .join("");
 }
 async function loadSharedData(force = false) {
-  if (sharedReadInFlight || (sharedSyncRunning && !force)) return;
-  if (!window.innovaSupabaseClient) return;
+  if (sharedReadInFlight || (sharedSyncRunning && !force)) return false;
+  if (!currentAuthUser || !window.innovaSupabaseClient) return false;
   sharedReadInFlight = true;
+  sharedReadError = null;
   try {
     const { data: result, error } = await window.innovaSupabaseClient
       .from("innova_state")
@@ -295,25 +129,23 @@ async function loadSharedData(force = false) {
     if (!Array.isArray(result.payload?.profiles) || typeof result.updated_at !== "string") {
       throw new Error("Os dados compartilhados do Supabase estão em formato inválido.");
     }
-    if ((sharedSyncPending || sharedSyncRunning) && !force) return;
+    if ((sharedSyncPending || sharedSyncRunning) && !force) return false;
 
     sharedRevision = result.updated_at;
     profiles = result.payload.profiles;
-    updateProfileOptions();
     if (activeProfile) {
       activeProfile = profiles.find(profile => profile.id === activeProfile.id) || activeProfile;
-      sessionStorage.setItem("innovaCoinsActiveProfile", JSON.stringify(activeProfile));
       selectedActor = activeProfile.name;
     }
 
     if (result.payload.database) {
       if (!Array.isArray(result.payload.database.classes)) throw new Error("O banco compartilhado não contém uma lista válida de turmas.");
+      clearLegacyDatabaseCache();
       const updatedDatabase = migrateDatabase(result.payload.database);
       const serializedDatabase = JSON.stringify(updatedDatabase);
       sharedDatabaseInitialized = true;
       if (JSON.stringify(database) !== serializedDatabase) {
         database = updatedDatabase;
-        localStorage.setItem(STORAGE_KEY, serializedDatabase);
         if (appHasRendered) {
           render();
           if (activeStudentId) openDrawer(activeStudentId);
@@ -322,15 +154,19 @@ async function loadSharedData(force = false) {
     } else {
       sharedDatabaseInitialized = false;
     }
+    sharedReadError = null;
+    return true;
   } catch (error) {
+    sharedReadError = error;
     console.error("Não foi possível ler os dados compartilhados", error);
     showToast(error.message || "Não foi possível sincronizar. Verifique a configuração da Vercel.", true);
+    return false;
   } finally {
     sharedReadInFlight = false;
   }
 }
 function queueSharedSync() {
-  if (!activeProfile || !window.innovaSupabaseClient) return;
+  if (!currentAuthUser || !activeProfile || !window.innovaSupabaseClient) return;
   sharedSyncPending = true;
   if (!sharedSyncRunning) void flushSharedSync();
 }
@@ -343,9 +179,7 @@ async function flushSharedSync() {
       const snapshot = JSON.parse(JSON.stringify(database));
       const { data: nextRevision, error } = await window.innovaSupabaseClient.rpc("save_innova_state", {
         p_payload: { database: snapshot, profiles },
-        p_expected_updated_at: sharedRevision,
-        p_profile_id: activeProfile.id,
-        p_pin: activeProfile.pin
+        p_expected_updated_at: sharedRevision
       });
       if (error) throw error;
       if (!nextRevision) {
@@ -357,6 +191,7 @@ async function flushSharedSync() {
 
       sharedRevision = nextRevision;
       sharedDatabaseInitialized = true;
+      clearLegacyDatabaseCache();
       if (JSON.stringify(database) !== JSON.stringify(snapshot)) sharedSyncPending = true;
     }
   } catch (error) {
@@ -366,21 +201,131 @@ async function flushSharedSync() {
     sharedSyncRunning = false;
   }
 }
-function showPinScreen() { document.getElementById("pin-screen").classList.remove("hidden"); }
-function enterWithPin() {
-  const profile = profiles.find(item => item.id === document.getElementById("profile-select").value);
-  const pin = document.getElementById("profile-pin").value;
-  if (!profile || pin !== profile.pin) { document.getElementById("pin-message").textContent = "Perfil ou PIN incorreto."; return; }
+function showLoginScreen(message = "") {
+  document.getElementById("auth-screen").classList.remove("hidden");
+  document.getElementById("login-message").textContent = message;
+}
+function setActiveProfile(profile) {
   activeProfile = profile;
   selectedActor = profile.name;
   selectedCalendarOwner = profile.id === "direcao" ? "staff:direcao" : calendarProfessorNames().includes(profile.name) ? profile.name : "";
-  sessionStorage.setItem("innovaCoinsActiveProfile", JSON.stringify(profile));
-  if (!sharedDatabaseInitialized) queueSharedSync();
-  document.getElementById("pin-message").textContent = "";
-  document.getElementById("pin-screen").classList.add("hidden");
-  render();
 }
-function changeProfile() { activeProfile = null; selectedActor = ""; sessionStorage.removeItem("innovaCoinsActiveProfile"); document.getElementById("profile-pin").value = ""; showPinScreen(); }
+function restoreLegacyDatabase() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY));
+    if (!saved || !Array.isArray(saved.classes)) return false;
+    database = migrateDatabase(saved);
+    return true;
+  } catch (error) {
+    console.warn("Não foi possível restaurar o cache local antigo", error);
+    return false;
+  }
+}
+async function openStaffSession(session, profileId) {
+  if (!session?.user) throw new Error("A sessão de autenticação não é válida.");
+  if (!DEFAULT_PROFILES.some(profile => profile.id === profileId)) {
+    throw new Error("O perfil selecionado não é válido.");
+  }
+  currentAuthUser = session.user;
+  const { data: assignment, error: assignmentError } = await window.innovaSupabaseClient
+    .from("innova_staff_profiles")
+    .select("profile_id")
+    .eq("user_id", session.user.id)
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  if (assignmentError) throw assignmentError;
+  if (!assignment) throw new Error("Esta conta não está associada a este perfil. Peça ao administrador para habilitar o acesso.");
+
+  if (!await loadSharedData()) {
+    if (sharedReadError?.code === "PGRST205") {
+      throw new Error("PIN reconhecido, mas o Supabase não encontrou a tabela innova_state. Execute o setup.sql completo no projeto Supabase configurado no site.");
+    }
+    throw new Error("Não foi possível carregar os dados protegidos. Verifique a configuração do Supabase.");
+  }
+  if (!sharedDatabaseInitialized) restoreLegacyDatabase();
+  const profile = profiles.find(item => item.id === profileId);
+  if (!profile) throw new Error("O perfil associado à conta não existe no estado compartilhado.");
+  setActiveProfile(profile);
+  document.getElementById("auth-screen").classList.add("hidden");
+  appHasRendered = true;
+  render();
+  if (!sharedDatabaseInitialized) queueSharedSync();
+  if (!supabaseRealtimeChannel) {
+    supabaseRealtimeChannel = window.innovaSupabaseClient
+      .channel("innova-state")
+      .on("postgres_changes", { event: "*", schema: "public", table: "innova_state", filter: "id=eq.main" }, () => {
+        void loadSharedData();
+      })
+      .subscribe(status => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.error("Não foi possível conectar às atualizações em tempo real do Supabase", status);
+        }
+      });
+  }
+}
+async function enterWithPin() {
+  const profileId = document.getElementById("profile-select").value;
+  const pin = document.getElementById("profile-pin").value;
+  const button = document.getElementById("login-submit");
+  button.disabled = true;
+  try {
+    const response = await fetch("/api/pin-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profileId, pin })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Perfil ou PIN incorreto.");
+    const { data, error } = await window.innovaSupabaseClient.auth.setSession({
+      access_token: result.access_token,
+      refresh_token: result.refresh_token
+    });
+    if (error) throw error;
+    await openStaffSession(data.session, profileId);
+    document.getElementById("login-message").textContent = "";
+  } catch (error) {
+    currentAuthUser = null;
+    activeProfile = null;
+    selectedActor = "";
+    const { error: signOutError } = await window.innovaSupabaseClient.auth.signOut();
+    if (signOutError) console.error("Não foi possível encerrar a sessão após uma falha de acesso", signOutError);
+    console.error("Não foi possível autenticar o funcionário", error);
+    showLoginScreen(error.message || "Perfil ou PIN incorreto.");
+  } finally {
+    button.disabled = false;
+    document.getElementById("profile-pin").value = "";
+  }
+}
+async function changeProfile() {
+  const { error } = await window.innovaSupabaseClient.auth.signOut();
+  if (error) {
+    console.error("Não foi possível encerrar a sessão", error);
+    showToast("Não foi possível sair. Tente novamente.", true);
+    return;
+  }
+  lockStaffSession();
+}
+function lockStaffSession() {
+  clearLegacyProfileSession();
+  currentAuthUser = null;
+  activeProfile = null;
+  selectedActor = "";
+  selectedCalendarOwner = "";
+  sharedRevision = null;
+  sharedDatabaseInitialized = false;
+  sharedSyncPending = false;
+  database = { classes: [], professors: [], awards: [], attendance: {}, monthlyCalendars: {} };
+  appHasRendered = false;
+  document.getElementById("content").innerHTML = "";
+  document.getElementById("sidebar-professores").innerHTML = "";
+  document.getElementById("header-total").textContent = "";
+  closeDrawer();
+  if (supabaseRealtimeChannel) {
+    void window.innovaSupabaseClient.removeChannel(supabaseRealtimeChannel);
+    supabaseRealtimeChannel = null;
+  }
+  showLoginScreen();
+}
 
 function applyTurmaThemes() {
   document.querySelectorAll(".turma-card, .podio-card").forEach(card => {
@@ -906,21 +851,9 @@ function compressImage(file) {
   });
 }
 document.addEventListener("DOMContentLoaded", async () => {
-  await loadSharedData();
+  clearLegacyProfileSession();
   updateProfileOptions();
-  if (window.innovaSupabaseClient) {
-    supabaseRealtimeChannel = window.innovaSupabaseClient
-      .channel("innova-state")
-      .on("postgres_changes", { event: "*", schema: "public", table: "innova_state", filter: "id=eq.main" }, () => {
-        void loadSharedData();
-      })
-      .subscribe(status => {
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          console.error("Não foi possível conectar às atualizações em tempo real do Supabase", status);
-        }
-      });
-  }
-  document.getElementById("pin-submit").addEventListener("click", enterWithPin);
+  document.getElementById("login-submit").addEventListener("click", enterWithPin);
   document.getElementById("profile-pin").addEventListener("keydown", event => { if (event.key === "Enter") enterWithPin(); });
   document.getElementById("change-profile-btn").addEventListener("click", changeProfile);
   document.getElementById("new-turma-btn").addEventListener("click", () => openClassModal());
@@ -943,13 +876,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("drawer-overlay").addEventListener("click", event => { if (event.target.id === "drawer-overlay") closeDrawer(); });
   document.addEventListener("click", event => { const chip = event.target.closest("[data-points]"); if (chip) registerPoints(chip.dataset.points, chip.dataset.label); });
   if (window.location.hash === "#historico") selectedClassId = "history";
-  const savedProfile = sessionStorage.getItem("innovaCoinsActiveProfile");
-  if (savedProfile) { const savedProfileData = JSON.parse(savedProfile); activeProfile = profiles.find(profile => profile.id === savedProfileData.id) || savedProfileData; selectedActor = activeProfile.name; selectedCalendarOwner = activeProfile.id === "direcao" ? "staff:direcao" : calendarProfessorNames().includes(activeProfile.name) ? activeProfile.name : ""; sessionStorage.setItem("innovaCoinsActiveProfile", JSON.stringify(activeProfile)); document.getElementById("pin-screen").classList.add("hidden"); }
-  render();
-  appHasRendered = true;
-  if (activeProfile && !sharedDatabaseInitialized) queueSharedSync();
+  window.innovaSupabaseClient.auth.onAuthStateChange(event => {
+    if (event === "SIGNED_OUT") lockStaffSession();
+  });
+  try {
+    const { data, error } = await window.innovaSupabaseClient.auth.getSession();
+    if (error) throw error;
+    if (data.session) await openStaffSession(data.session);
+  } catch (error) {
+    currentAuthUser = null;
+    activeProfile = null;
+    await window.innovaSupabaseClient.auth.signOut();
+    console.error("Não foi possível restaurar a sessão autorizada", error);
+    showLoginScreen(error.message || "Não foi possível validar sua conta.");
+  }
   setInterval(() => {
-    if (!sharedSyncRunning && !sharedSyncPending) void loadSharedData();
+    if (currentAuthUser && !sharedSyncRunning && !sharedSyncPending) void loadSharedData();
   }, 30000);
   setInterval(() => {
     const today = localDateString();
@@ -980,6 +922,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }, 5000);
 });
 window.addEventListener("hashchange", () => {
+  if (!activeProfile) return;
   selectedProfessorId = null;
   selectedClassId = window.location.hash === "#historico" ? "history" : "overview";
   render();

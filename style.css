@@ -45,14 +45,14 @@ h1,h2,h3{ font-family:"Baloo 2", sans-serif; margin:0; }
 button{ font-family: inherit; }
 :focus-visible{ outline: 3px solid var(--blue); outline-offset: 2px; }
 
-.pin-screen{ display:flex; position:fixed; inset:0; z-index:50; align-items:center; justify-content:center; padding:20px; background:var(--bg-grad); }
-.pin-screen.hidden{ display:none; }
-.pin-card{ width:min(390px,100%); padding:30px; background:rgba(36,20,82,.96); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); }
+.auth-screen{ display:flex; position:fixed; inset:0; z-index:50; align-items:center; justify-content:center; padding:20px; background:var(--bg-grad); }
+.auth-screen.hidden{ display:none; }
+.auth-card{ width:min(390px,100%); padding:30px; background:rgba(36,20,82,.96); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); }
 .auth-brand{ display:grid; place-items:center; width:52px; height:52px; margin-bottom:18px; border-radius:50%; background:var(--gold); color:var(--dark-text); font-family:"Baloo 2"; font-size:1.15rem; font-weight:800; }
-.pin-card h1{ font-size:2rem; color:var(--ink); }
-.pin-card > p:not(.page-kicker):not(.auth-message){ color:var(--ink-soft); font-size:.88rem; }
-.pin-card select,.pin-card input{ width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg); color:var(--ink); font:inherit; }
-.pin-card .auth-submit{ width:100%; }
+.auth-card h1{ font-size:2rem; color:var(--ink); }
+.auth-card > p:not(.page-kicker):not(.auth-message){ color:var(--ink-soft); font-size:.88rem; }
+.auth-card input{ width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg); color:var(--ink); font:inherit; }
+.auth-card .auth-submit{ width:100%; }
 .actor-label{ margin:0 0 14px; color:var(--ink-soft); font-size:.82rem; }
 .actor-label strong{ color:var(--gold); }
 
